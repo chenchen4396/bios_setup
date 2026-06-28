@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIOS 选项管理器 - Redfish Attribute Registry</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="app">
+    <!-- 工具栏 -->
+    <header id="toolbar">
+        <span id="app-title">BIOS 选项管理器</span>
+        <div id="toolbar-left">
+            <button id="btn-import" class="btn btn-primary">导入文件</button>
+            <button id="btn-load-demo" class="btn">加载示例</button>
+            <button id="btn-export" class="btn">导出 Excel</button>
+        </div>
+        <div id="toolbar-center">
+            <input id="search-input" type="text" placeholder="搜索属性名称、描述或平台..." />
+        </div>
+        <div id="toolbar-right">
+            <span id="modified-count">已修改: 0 项</span>
+            <button id="btn-save" class="btn btn-primary">保存修改</button>
+        </div>
+    </header>
+
+    <!-- 主体 -->
+    <div id="main-container">
+        <!-- 侧边栏 -->
+        <aside id="sidebar">
+            <div id="system-selector">
+                <select id="select-system">
+                    <option value="">-- 选择机型 --</option>
+                </select>
+                <button id="btn-delete-system" class="btn btn-small btn-danger" title="删除当前机型">删除</button>
+            </div>
+            <nav id="menu-tree">
+                <div class="menu-label-row">
+                    <span class="menu-label">菜单导航</span>
+                    <button id="btn-add-menu" title="添加自定义菜单">+ 菜单</button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- 内容 -->
+        <section id="content">
+            <div id="content-header">
+                <span id="current-menu-path">所有属性</span>
+                <span id="result-count"></span>
+                <div id="content-header-actions">
+                    <button id="btn-add-attr" class="btn btn-small btn-success" title="添加自定义选项">+ 添加选项</button>
+                    <button id="btn-batch-edit" class="btn btn-small">批量编辑</button>
+                    <button id="btn-clear-search" class="btn btn-small hidden">清除搜索</button>
+                </div>
+            </div>
+            <!-- 筛选栏 -->
+            <div id="filter-bar">
+                <input id="filter-attr" type="text" placeholder="属性标识..." title="属性标识筛选" />
+                <select id="filter-type"><option value="">全部类型</option><option value="Enumeration">枚举</option><option value="String">字符串</option><option value="Integer">整数</option><option value="Boolean">布尔</option><option value="Password">密码</option></select>
+                <select id="filter-scope"><option value="">全部来源</option></select>
+                <select id="filter-platform"><option value="">全部平台</option></select>
+                <select id="filter-readonly"><option value="">是否只读</option><option value="1">是</option><option value="0">否</option></select>
+                <select id="filter-redfish"><option value="">是否支持Redfish</option><option value="1">是</option><option value="0">否</option></select>
+                <button id="btn-clear-filter" class="btn btn-small" title="清除所有筛选">清除筛选</button>
+            </div>
+            <div id="active-filters"></div>
+            <div id="attribute-table-container">
+                <table id="attribute-table">
+                    <thead>
+                        <tr>
+                            <th>菜单路径</th>
+                            <th>属性标识</th>
+                            <th>显示名称</th>
+                            <th>中文名称</th>
+                            <th>默认值</th>
+                            <th>可选值</th>
+                            <th>来源</th>
+                            <th>支持Redfish</th>
+                            <th>只读</th>
+                            <th>平台</th>
+                            <th>说明</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attribute-tbody"></tbody>
+                </table>
+                <div id="empty-state" class="hidden">
+                    <div class="empty-icon">📋</div>
+                    <p>请导入 BIOS 配置文件或加载示例数据</p>
+                    <p style="font-size:12px;">支持 .json / .json.gz / .xlsx 格式</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-container">
+            <div id="modal-header">
+                <h3 id="modal-title"></h3>
+                <button id="modal-close">&times;</button>
+            </div>
+            <div id="modal-body"></div>
+            <div id="modal-footer">
+                <button id="modal-cancel" class="btn">取消</button>
+                <button id="modal-confirm" class="btn btn-primary">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知 -->
+    <div id="notification-container"></div>
+</div>
+
+<!-- CDN -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+
+<!-- 应用模块 -->
+<script src="js/models.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/menu-tree.js"></script>
+<script src="js/dependency-engine.js"></script>
+<script src="js/editors.js"></script>
+<script src="js/ui-common.js"></script>
+<script src="js/ui-sidebar.js"></script>
+<script src="js/ui-table.js"></script>
+<script src="js/ui-forms.js"></script>
+<script src="js/ui-renderer.js"></script>
+<script src="js/export.js"></script>
+<script src="js/demo-data.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

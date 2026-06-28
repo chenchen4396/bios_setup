@@ -1,0 +1,13 @@
+{
+  "name": "bios-manager",
+  "version": "1.0.0",
+  "description": "BIOS 选项管理器 — 基于 Redfish AttributeRegistry 的超聚变 BIOS 配置管理工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
