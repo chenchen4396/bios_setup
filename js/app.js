@@ -884,8 +884,8 @@ const AppState = {
             }
         }
 
-        // 本地模式：只加载 2288H V7
-        const demoProfile = buildModelProfile(MODEL_2288HV7);
+        // 本地模式：加载演示机型
+        const demoProfile = buildModelProfile(DEMO_MODEL);
         DependencyEngine.evaluateAll(demoProfile);
         await Storage.saveSystem(demoProfile);
 

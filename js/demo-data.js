@@ -1,697 +1,321 @@
-/**
- * 超聚变 (FusionServer) 多机型数据
- * 基于 DMTF DSP8010 AttributeRegistry v1.3.0 规范
- *
- * 每个机型拥有独立完整的属性集，体现代际/平台/用途差异
- */
 
-const E  = (v)    => ({ valueName: v, valueDisplayName: v });
-const EN = (v,d)  => ({ valueName: v, valueDisplayName: d });
+// ============ 机型定义 (304 个 BIOS 选项，全部含英文帮助) ============
+const E=(v)=>({valueName:v,valueDisplayName:v});const EN=(v,d)=>({valueName:v,valueDisplayName:d});
+const MENUS=[{MenuName:'Main',DisplayName:'Main',displayNameZh:'主页信息',DisplayOrder:1,MenuPath:'./Main'},{MenuName:'Boot',DisplayName:'Boot',displayNameZh:'启动配置',DisplayOrder:3,MenuPath:'./BootOptions'},{MenuName:'Security',DisplayName:'Security',displayNameZh:'安全配置',DisplayOrder:4,MenuPath:'./Security'},{MenuName:'SvrMgmt',DisplayName:'Server Mgmt',displayNameZh:'服务器管理',DisplayOrder:5,MenuPath:'./ServerManagement'},{MenuName:'Processor',DisplayName:'Processor Config',displayNameZh:'处理器配置',DisplayOrder:10,MenuPath:'./Advanced/ProcessorOptions'},{MenuName:'Memory',DisplayName:'Memory Config',displayNameZh:'内存配置',DisplayOrder:20,MenuPath:'./Advanced/MemoryConfig'},{MenuName:'Storage',DisplayName:'Storage Config',displayNameZh:'存储配置',DisplayOrder:30,MenuPath:'./Advanced/StorageConfig'},{MenuName:'Network',DisplayName:'Network Stack',displayNameZh:'网络配置',DisplayOrder:40,MenuPath:'./Advanced/NetworkStack'},{MenuName:'Power',DisplayName:'Power & Perf',displayNameZh:'电源与性能',DisplayOrder:50,MenuPath:'./Advanced/PowerMgmt'},{MenuName:'PCIe',DisplayName:'PCIe Config',displayNameZh:'PCIe配置',DisplayOrder:60,MenuPath:'./Advanced/PCIeConfig'},{MenuName:'USB',DisplayName:'USB Config',displayNameZh:'USB配置',DisplayOrder:70,MenuPath:'./Advanced/USBConfig'},{MenuName:'Serial',DisplayName:'Serial Config',displayNameZh:'串口配置',DisplayOrder:80,MenuPath:'./Advanced/SerialConfig'},{MenuName:'RAS',DisplayName:'RAS Config',displayNameZh:'RAS配置',DisplayOrder:90,MenuPath:'./Advanced/RASConfig'},{MenuName:'Misc',DisplayName:'Miscellaneous',displayNameZh:'其他高级',DisplayOrder:99,MenuPath:'./Advanced/MiscConfig'},{MenuName:'Prefetch',DisplayName:'Prefetcher',displayNameZh:'预取器',DisplayOrder:11,MenuPath:'./Advanced/ProcessorOptions/PrefetcherConfig'},{MenuName:'Cores',DisplayName:'Core Config',displayNameZh:'核心配置',DisplayOrder:12,MenuPath:'./Advanced/ProcessorOptions/CoreConfig'},{MenuName:'UPI',DisplayName:'UPI Config',displayNameZh:'UPI链路',DisplayOrder:13,MenuPath:'./Advanced/ProcessorOptions/UPIConfig'},{MenuName:'MemRAS',DisplayName:'Memory RAS',displayNameZh:'内存RAS',DisplayOrder:21,MenuPath:'./Advanced/MemoryConfig/MemoryRAS'},{MenuName:'MemTiming',DisplayName:'Memory Timing',displayNameZh:'内存时序',DisplayOrder:22,MenuPath:'./Advanced/MemoryConfig/MemoryTiming'},{MenuName:'CPU_Pwr',DisplayName:'CPU Power',displayNameZh:'CPU功耗',DisplayOrder:51,MenuPath:'./Advanced/PowerMgmt/CPU_Power'},{MenuName:'Thermal',DisplayName:'Thermal Mgmt',displayNameZh:'散热管理',DisplayOrder:52,MenuPath:'./Advanced/PowerMgmt/ThermalMgmt'},{MenuName:'UEFI_Net',DisplayName:'UEFI Network',displayNameZh:'UEFI网络',DisplayOrder:41,MenuPath:'./Advanced/NetworkStack/UEFI_Network'},{MenuName:'iSCSI_Cfg',DisplayName:'iSCSI Config',displayNameZh:'iSCSI配置',DisplayOrder:42,MenuPath:'./Advanced/NetworkStack/iSCSI_Config'},{MenuName:'TPM_Cfg',DisplayName:'TPM Config',displayNameZh:'TPM配置',DisplayOrder:1,MenuPath:'./Security/TPM_Config'},{MenuName:'SB_Cfg',DisplayName:'Secure Boot',displayNameZh:'安全启动',DisplayOrder:2,MenuPath:'./Security/SecureBootConfig'},{MenuName:'BootOrd',DisplayName:'Boot Device',displayNameZh:'启动设备',DisplayOrder:1,MenuPath:'./BootOptions/BootDeviceOrder'},{MenuName:'BootPol',DisplayName:'Boot Policy',displayNameZh:'启动策略',DisplayOrder:2,MenuPath:'./BootOptions/BootPolicy'},{MenuName:'BMC_Net',DisplayName:'BMC Network',displayNameZh:'BMC网络',DisplayOrder:1,MenuPath:'./ServerManagement/BMC_Network'},{MenuName:'EventLog',DisplayName:'Event Log',displayNameZh:'事件日志',DisplayOrder:2,MenuPath:'./ServerManagement/EventLog'},{MenuName:'PkgCState',DisplayName:'Package C-State',displayNameZh:'封装C状态',DisplayOrder:1,MenuPath:'./Advanced/PowerMgmt/CPU_Power/PackageCState'},{MenuName:'PerCore',DisplayName:'Per Core',displayNameZh:'按核配置',DisplayOrder:1,MenuPath:'./Advanced/ProcessorOptions/CoreConfig/PerCore'},{MenuName:'CoreLimit',DisplayName:'Core State Limit',displayNameZh:'状态限制',DisplayOrder:1,MenuPath:'./Advanced/ProcessorOptions/CoreConfig/PerCore/CoreStateLimit'},{MenuName:'Graphics',DisplayName:'Graphics',displayNameZh:'显卡配置',DisplayOrder:100,MenuPath:'./Advanced/GraphicsConfig'},{MenuName:'SMI_Cfg',DisplayName:'SMI Config',displayNameZh:'SMI配置',DisplayOrder:110,MenuPath:'./Advanced/SMIConfig'},{MenuName:'SGX_Cfg',DisplayName:'Intel SGX',displayNameZh:'SGX',DisplayOrder:3,MenuPath:'./Security/IntelSGX'},{MenuName:'TXT_Cfg',DisplayName:'Intel TXT',displayNameZh:'TXT',DisplayOrder:4,MenuPath:'./Security/IntelTXT'},{MenuName:'TME_Cfg',DisplayName:'Intel TME',displayNameZh:'TME',DisplayOrder:5,MenuPath:'./Security/IntelTME'},{MenuName:'UPI_Pwr',DisplayName:'UPI Power',displayNameZh:'UPI功耗',DisplayOrder:2,MenuPath:'./Advanced/PowerMgmt/CPU_Power/UPI_Power'},{MenuName:'Interleave',DisplayName:'Interleave',displayNameZh:'内存交织',DisplayOrder:23,MenuPath:'./Advanced/MemoryConfig/MemoryInterleave'},{MenuName:'Sparing',DisplayName:'Sparing',displayNameZh:'内存备用',DisplayOrder:24,MenuPath:'./Advanced/MemoryConfig/MemorySparing'},{MenuName:'HWPM_Cfg',DisplayName:'HWPM Advanced',displayNameZh:'HWPM高级',DisplayOrder:3,MenuPath:'./Advanced/PowerMgmt/CPU_Power/PState_HWPM'},{MenuName:'RAS_Mem',DisplayName:'Mem RAS Detail',displayNameZh:'RAS详情',DisplayOrder:1,MenuPath:'./Advanced/RASConfig/MemRAS'},{MenuName:'PMem_Cfg',DisplayName:'Optane PMem',displayNameZh:'傲腾PMem',DisplayOrder:40,MenuPath:'./Advanced/StorageConfig/OptanePMem'},{MenuName:'SysInfo',DisplayName:'System Info',displayNameZh:'系统信息',DisplayOrder:3,MenuPath:'./ServerManagement/SystemInfo'},{MenuName:'PwrRestore',DisplayName:'Power Restore',displayNameZh:'电源恢复',DisplayOrder:4,MenuPath:'./ServerManagement/PowerRestore'},{MenuName:'Slots',DisplayName:'Per-Slot',displayNameZh:'按槽位',DisplayOrder:1,MenuPath:'./Advanced/PCIeConfig/PerSlot'},{MenuName:'USB_Mass',DisplayName:'USB Mass Storage',displayNameZh:'USB存储',DisplayOrder:1,MenuPath:'./Advanced/USBConfig/USB_MassStorage'},{MenuName:'IMON_Cfg',DisplayName:'IMON Config',displayNameZh:'IMON',DisplayOrder:4,MenuPath:'./Advanced/PowerMgmt/CPU_Power/IMON_Config'},{MenuName:'TrustExe',DisplayName:'Trusted Exec',displayNameZh:'可信执行',DisplayOrder:1,MenuPath:'./Advanced/MiscConfig/TrustedExecution'},{MenuName:'RAS_Adv',DisplayName:'RAS Advanced',displayNameZh:'RAS高级',DisplayOrder:1,MenuPath:'./Advanced/ProcessorOptions/RAS_Advanced'},{MenuName:'BBS_Cfg',DisplayName:'BBS Priority',displayNameZh:'BBS优先级',DisplayOrder:3,MenuPath:'./BootOptions/BBS_Priority'},{MenuName:'EraseCfg',DisplayName:'Secure Erase',displayNameZh:'安全擦除',DisplayOrder:6,MenuPath:'./Security/SecureErase'},{MenuName:'LDAP_Cfg',DisplayName:'LDAP Config',displayNameZh:'LDAP配置',DisplayOrder:7,MenuPath:'./Security/LDAP_Config'},];
 
-/* ================================================================
- * 公共菜单树 (所有机型共享)
- * ================================================================ */
-const COMMON_MENUS = [
-    { MenuName:'Main',     DisplayName:'Main',           displayNameZh:'主要 / 系统信息',  DisplayOrder:1,  MenuPath:'./' },
-    { MenuName:'Proc',     DisplayName:'Processor',      displayNameZh:'处理器配置',       DisplayOrder:2,  MenuPath:'./Processor' },
-    { MenuName:'Mem',      DisplayName:'Memory',         displayNameZh:'内存配置',         DisplayOrder:3,  MenuPath:'./Memory' },
-    { MenuName:'Storage',  DisplayName:'Storage',        displayNameZh:'存储配置',         DisplayOrder:4,  MenuPath:'./Storage' },
-    { MenuName:'Network',  DisplayName:'Network',        displayNameZh:'网络配置',         DisplayOrder:5,  MenuPath:'./Network' },
-    { MenuName:'Power',    DisplayName:'Power',          displayNameZh:'电源与性能',       DisplayOrder:6,  MenuPath:'./Power' },
-    { MenuName:'Boot',     DisplayName:'Boot',           displayNameZh:'启动配置',         DisplayOrder:7,  MenuPath:'./Boot' },
-    { MenuName:'Security', DisplayName:'Security',       displayNameZh:'安全配置',         DisplayOrder:8,  MenuPath:'./Security' },
-    { MenuName:'Advanced', DisplayName:'Advanced',       displayNameZh:'高级配置',         DisplayOrder:9,  MenuPath:'./Advanced' },
-    { MenuName:'SvrMgmt',  DisplayName:'Server Mgmt',    displayNameZh:'服务器管理',       DisplayOrder:10, MenuPath:'./ServerMgmt' },
-    { MenuName:'Misc',     DisplayName:'Miscellaneous',  displayNameZh:'杂项配置',         DisplayOrder:11, MenuPath:'./Misc' },
-];
-
-function buildMenus(profile) {
-    for (const m of COMMON_MENUS) profile.menuMap[m.MenuName] = createMenu(m);
-}
-
-function buildAttrs(profile, defs) {
-    for (const d of defs) {
-        const vlist = d.val || [];
-        profile.attrMap[d.name] = createAttribute({
-            AttributeName: d.name, Type: d.type, DefaultValue: d.def,
-            DisplayName: d.disp, displayNameZh: d.dispZh || '',
-            HelpText: d.help||'', helpTextZh: d.helpZh||'',
-            MenuPath: d.menu, readOnly: d.ro || false,
-            resetRequired: d.rb || false,
-            Value: vlist.length ? vlist : undefined,
-            LowerBound: d.lb??null, UpperBound: d.ub??null,
-            ScalarIncrement: d.st??null,
-            MinLength: d.mn??null, MaxLength: d.mx??null,
-            AttributeScope: d.sc||'通用', Platforms: d.pl||[],
-            supportsRedfish: d.sr!==undefined ? d.sr : true
-        });
-    }
-}
-
-function buildDeps(profile) {
-    profile.dependencies = [
-        createDependency({ DependencyFor:'SecureBoot',     MapFromAttribute:'BootMode',    MapFromProperty:'CurrentValue', MapFromCondition:'EQU', MapFromValue:'LegacyBios', MapToProperty:'Hidden',   MapToValue:true }),
-        createDependency({ DependencyFor:'BootMode',       MapFromAttribute:'SecureBoot',  MapFromProperty:'CurrentValue', MapFromCondition:'EQU', MapFromValue:'Enabled',    MapToProperty:'ReadOnly', MapToValue:true }),
-        createDependency({ DependencyFor:'SriovPCIe',      MapFromAttribute:'IntelVTd',    MapFromProperty:'CurrentValue', MapFromCondition:'EQU', MapFromValue:'Disabled',   MapToProperty:'GrayOut',  MapToValue:true }),
-        createDependency({ DependencyFor:'PowerCapValue',  MapFromAttribute:'PowerCapEnable',MapFromProperty:'CurrentValue',MapFromCondition:'NEQ',MapFromValue:'Enabled',    MapToProperty:'GrayOut',  MapToValue:true }),
-    ];
-}
-
-/* ================================================================
- * 机型 1: FusionServer 2288H V7 — 2U2P Sapphire Rapids 旗舰
- * ================================================================ */
-const MODEL_2288HV7 = {
-    productName: 'FusionServer 2288H V7',
-    systemId: 'FUSION_2288HV7',
-    firmwareVersion: 'iBMC V690 v3.45',
+const DEMO_MODEL = {
+    productName: 'RackServer RS2600 G6',
+    systemId: 'RS2600G6',
+    firmwareVersion: 'BMC v2.2.0',
     attrs: [
-        // ---- Main ----
-        { name:'BiosVersion',        type:'String', def:'V690',       disp:'BIOS Version',         dispZh:'BIOS 版本',        help:'Current BIOS firmware version.', helpZh:'当前BIOS固件版本。', menu:'./', ro:true },
-        { name:'BiosReleaseDate',    type:'String', def:'2026-03-15', disp:'BIOS Release Date',     dispZh:'BIOS 发布日期',    help:'BIOS firmware release date.',    helpZh:'BIOS固件发布日期。', menu:'./', ro:true },
-        { name:'ProductName',        type:'String', def:'FusionServer 2288H V7', disp:'Product Name', dispZh:'产品名称',  help:'System product model.',          helpZh:'系统产品型号。', menu:'./', ro:true },
-        { name:'BoardSerialNumber',  type:'String', def:'SNF12345678',disp:'Board Serial Number',   dispZh:'主板序列号',      help:'Unique board serial number.',    helpZh:'主板唯一序列号。', menu:'./', ro:true },
-        { name:'CpuMicrocodeVersion',type:'String', def:'0x2B000171', disp:'CPU Microcode Version',  dispZh:'CPU 微码版本',    help:'Processor microcode patch.',    helpZh:'处理器微码补丁级别。', menu:'./', ro:true },
-
-        // ---- Processor (Sapphire Rapids) ----
-        { name:'IntelHyperThreading',     type:'Enumeration', def:'Enabled',  disp:'Hyper-Threading',      dispZh:'超线程技术',       help:'Each physical core runs two logical threads.', helpZh:'每核运行两个逻辑线程。', menu:'./Processor', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'ActiveCoresPerProcessor', type:'Integer',     def:0,          disp:'Active Cores/Proc',    dispZh:'每处理器启用核心数', help:'0=all cores. Max 56 on SPR.',              helpZh:'0=全部核心，最多56核。', menu:'./Processor', lb:0, ub:56, st:1, rb:true },
-        { name:'IntelVT',                 type:'Enumeration', def:'Enabled',  disp:'Intel VT-x',           dispZh:'Intel 虚拟化技术',  help:'Hardware virtualization for hypervisors.',  helpZh:'硬件虚拟化加速。', menu:'./Processor', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'IntelVTd',                type:'Enumeration', def:'Enabled',  disp:'Intel VT-d',           dispZh:'Intel VT-d 定向I/O',help:'I/O device virtualization.',               helpZh:'I/O设备硬件虚拟化。', menu:'./Processor', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'ProcTurboMode',           type:'Enumeration', def:'Enabled',  disp:'Turbo Boost',          dispZh:'Turbo 加速模式',    help:'Automatic frequency boost under thermal headroom.', helpZh:'散热允许时自动提升频率。', menu:'./Processor', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'ProcCStates',             type:'Enumeration', def:'Enabled',  disp:'CPU C-States',          dispZh:'C状态节能',        help:'Idle power states. Disable reduces latency.', helpZh:'空闲节能状态，禁用降低延迟。', menu:'./Processor', val:[E('Enabled'),E('Disabled')] },
-        { name:'ProcC1e',                 type:'Enumeration', def:'Enabled',  disp:'C1E Enhanced Halt',     dispZh:'C1E 增强暂停',      help:'Enhanced idle halt for power saving.',        helpZh:'增强空闲暂停节能。', menu:'./Processor', val:[E('Enabled'),E('Disabled')] },
-        { name:'ProcConfigTDP',           type:'Enumeration', def:'Nominal',  disp:'Configurable TDP',      dispZh:'可配置TDP',         help:'Set processor Thermal Design Power level.',   helpZh:'设置处理器TDP级别。', menu:'./Processor', val:[E('Nominal'),E('Maximum'),EN('Reduced','Reduced Power')], sc:'字节', rb:true },
-        { name:'SR_IOV_Global',           type:'Enumeration', def:'Disabled', disp:'SR-IOV Global',         dispZh:'SR-IOV 全局启用',   help:'Single Root I/O Virtualization.',             helpZh:'单根I/O虚拟化。', menu:'./Processor', val:[E('Enabled'),E('Disabled')], rb:true },
-
-        // ---- Memory (DDR5) ----
-        { name:'TotalMemSize',     type:'String',     def:'1024 GB',  disp:'Total Memory',        dispZh:'总内存容量',       help:'Total physical memory installed.', helpZh:'已安装总物理内存。', menu:'./Memory', ro:true },
-        { name:'MemSpeed',         type:'Enumeration', def:'Auto',     disp:'Memory Speed',        dispZh:'内存速率',         help:'DDR5 bus speed. Auto=max supported.', helpZh:'DDR5速率，Auto=最大。', menu:'./Memory', val:[E('Auto'),E('5600'),E('5200'),E('4800'),E('4400'),E('4000')], rb:true },
-        { name:'MemVoltage',       type:'Enumeration', def:'1.1V',    disp:'Memory Voltage',      dispZh:'内存电压',         help:'DDR5 DIMM operating voltage.',       helpZh:'DDR5 DIMM工作电压。', menu:'./Memory', val:[E('1.1V'),E('1.2V')] },
-        { name:'MemPatrolScrub',   type:'Enumeration', def:'Enabled', disp:'Patrol Scrub',         dispZh:'内存巡检擦除',     help:'Periodically scan and correct memory errors.', helpZh:'定期扫描修正内存错误。', menu:'./Memory', val:[E('Enabled'),E('Disabled')] },
-        { name:'MemNumaMode',      type:'Enumeration', def:'Enabled', disp:'NUMA Optimization',    dispZh:'NUMA 优化',        help:'NUMA-aware memory interleaving.',    helpZh:'多路NUMA感知交织。', menu:'./Memory', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'MemMirrorMode',    type:'Enumeration', def:'Disabled',disp:'Memory Mirror',        dispZh:'内存镜像',         help:'Mirror channels for fault tolerance (halves capacity).', helpZh:'通道镜像容错，容量减半。', menu:'./Memory', val:[E('Disabled'),E('Enabled'),E('Spare')], rb:true },
-        { name:'MemRASMode',       type:'Enumeration', def:'MaxPerf', disp:'Memory RAS Mode',      dispZh:'内存RAS模式',      help:'Performance vs reliability trade-off.', helpZh:'性能与可靠性权衡。', menu:'./Memory', val:[EN('MaxPerf','Max Performance'),EN('MaxRel','Max Reliability'),EN('ADDDC','ADDDC')], sc:'字节', rb:true },
-        { name:'DcpmmTotalCapacity',type:'String',     def:'512 GB',  disp:'Optane PMem Total',   dispZh:'傲腾持久内存总量', help:'Intel Optane Persistent Memory total.', helpZh:'傲腾持久内存总容量。', menu:'./Memory', ro:true, sc:'字节' },
-        { name:'DcpmmAppDirectMode',type:'Enumeration', def:'Disabled',disp:'PMem App Direct',      dispZh:'PMem App Direct',   help:'Access Optane PMem as block device.',  helpZh:'傲腾持久内存块设备访问。', menu:'./Memory', val:[E('Enabled'),E('Disabled')], sc:'字节', rb:true },
-
-        // ---- Storage ----
-        { name:'SataController',   type:'Enumeration', def:'Enabled', disp:'SATA Controller',    dispZh:'SATA 控制器',        help:'Integrated SATA controller.',        helpZh:'板载SATA控制器。', menu:'./Storage', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'SataMode',         type:'Enumeration', def:'AHCI',    disp:'SATA Mode',          dispZh:'SATA 工作模式',       help:'AHCI for hot-plug; RAID for arrays.', helpZh:'AHCI热插拔；RAID阵列。', menu:'./Storage', val:[E('AHCI'),E('RAID')], rb:true },
-        { name:'SataHotplugCap',   type:'Enumeration', def:'Enabled', disp:'SATA Hot Plug',      dispZh:'SATA 热插拔',         help:'Hot-plug support on all SATA ports.', helpZh:'所有SATA端口热插拔。', menu:'./Storage', val:[E('Enabled'),E('Disabled')] },
-        { name:'SataPorts_0_3',    type:'Enumeration', def:'Enabled', disp:'SATA Ports 0-3',     dispZh:'SATA 端口 0-3',       help:'Enable ports 0 through 3.',           helpZh:'端口0-3启用。', menu:'./Storage', val:[E('Enabled'),E('Disabled')] },
-        { name:'SataPorts_4_7',    type:'Enumeration', def:'Enabled', disp:'SATA Ports 4-7',     dispZh:'SATA 端口 4-7',       help:'Enable ports 4 through 7.',           helpZh:'端口4-7启用。', menu:'./Storage', val:[E('Enabled'),E('Disabled')] },
-        { name:'NvmeRaidMode',     type:'Enumeration', def:'Disabled',disp:'NVMe RAID',           dispZh:'NVMe RAID 模式',      help:'NVMe RAID via VROC.',                 helpZh:'VROC NVMe RAID。', menu:'./Storage', val:[E('Enabled'),E('Disabled')], sc:'百度', rb:true },
-        { name:'OnboardRaidCtrl',  type:'Enumeration', def:'Enabled', disp:'Onboard RAID Ctrl',  dispZh:'板载RAID控制器',      help:'Onboard RAID controller (LSI 9560).', helpZh:'板载RAID (LSI 9560)。', menu:'./Storage', val:[E('Enabled'),E('Disabled')], sc:'百度', rb:true },
-
-        // ---- Network ----
-        { name:'NicPXEStack',      type:'Enumeration', def:'Enabled',  disp:'UEFI PXE Stack',     dispZh:'UEFI PXE 协议栈',  help:'UEFI network stack for PXE boot.',  helpZh:'UEFI模式PXE网络启动。', menu:'./Network', val:[E('Enabled'),E('Disabled')] },
-        { name:'NicHTTPBoot',      type:'Enumeration', def:'Disabled', disp:'HTTP Boot',          dispZh:'HTTP 启动支持',    help:'HTTP/HTTPS boot from network.',      helpZh:'HTTP/HTTPS网络启动。', menu:'./Network', val:[E('Enabled'),E('Disabled')] },
-        { name:'NicIPv4PXE',       type:'Enumeration', def:'Enabled',  disp:'IPv4 PXE',           dispZh:'IPv4 PXE 支持',    help:'IPv4 PXE boot support.',             helpZh:'IPv4 PXE启动。', menu:'./Network', val:[E('Enabled'),E('Disabled')] },
-        { name:'NicIPv6PXE',       type:'Enumeration', def:'Disabled', disp:'IPv6 PXE',           dispZh:'IPv6 PXE 支持',    help:'IPv6 PXE boot support.',             helpZh:'IPv6 PXE启动。', menu:'./Network', val:[E('Enabled'),E('Disabled')] },
-        { name:'NicVlanSupport',   type:'Enumeration', def:'Disabled', disp:'VLAN Tagging',       dispZh:'VLAN 标记',        help:'VLAN tagging for UEFI network.',     helpZh:'UEFI网络VLAN标记。', menu:'./Network', val:[E('Enabled'),E('Disabled')] },
-        { name:'NicBootMode',      type:'Enumeration', def:'UEFI',     disp:'NIC Boot Mode',      dispZh:'网卡启动协议',     help:'UEFI or Legacy PXE for NIC boot.',   helpZh:'网卡启动UEFI/Legacy PXE。', menu:'./Network', val:[E('UEFI'),E('Legacy PXE')], rb:true },
-        { name:'IscsiBootSupport', type:'Enumeration', def:'Disabled', disp:'iSCSI Boot',         dispZh:'iSCSI 启动',       help:'iSCSI initiator for SAN boot.',       helpZh:'SAN启动iSCSI。', menu:'./Network', val:[E('Enabled'),E('Disabled')], rb:true },
-
-        // ---- Boot ----
-        { name:'BootMode',       type:'Enumeration', def:'Uefi',    disp:'Boot Mode',           dispZh:'启动模式',       help:'UEFI or Legacy BIOS boot mode.',     helpZh:'UEFI或Legacy BIOS启动。', menu:'./Boot', val:[EN('Uefi','UEFI'),EN('LegacyBios','Legacy BIOS')], rb:true },
-        { name:'FastBoot',       type:'Enumeration', def:'Enabled', disp:'Fast Boot',            dispZh:'快速启动',       help:'Skip certain POST checks for speed.',helpZh:'跳过部分POST检查加速。', menu:'./Boot', val:[E('Enabled'),E('Disabled')] },
-        { name:'QuietBoot',      type:'Enumeration', def:'Enabled', disp:'Quiet Boot',           dispZh:'安静启动',       help:'Show logo instead of POST messages.',helpZh:'显示Logo而非POST信息。', menu:'./Boot', val:[E('Enabled'),E('Disabled')] },
-        { name:'BootTimeout',    type:'Integer',     def:5,        disp:'Boot Timeout (s)',     dispZh:'启动超时(秒)',   help:'Seconds before default boot entry.', helpZh:'默认启动项前等待秒数。', menu:'./Boot', lb:1, ub:65535, st:1 },
-        { name:'BootRetryCount', type:'Integer',     def:3,        disp:'Boot Retry Count',     dispZh:'启动重试次数',   help:'Auto retry on boot failure.',        helpZh:'启动失败自动重试。', menu:'./Boot', lb:0, ub:10, st:1 },
-        { name:'BootOrderType',  type:'Enumeration', def:'Custom', disp:'Boot Order Type',      dispZh:'启动顺序类型',   help:'Custom or default boot order.',      helpZh:'自定义或默认启动顺序。', menu:'./Boot', val:[E('Custom'),E('Default')] },
-        { name:'PxeBootPriority',type:'Enumeration', def:'AfterStorage',disp:'PXE Boot Priority',dispZh:'PXE 启动优先级',help:'Relative priority of PXE vs storage.',helpZh:'PXE与存储启动相对优先级。', menu:'./Boot', val:[E('AfterStorage'),E('BeforeStorage'),E('Disabled')] },
-
-        // ---- Security ----
-        { name:'SecureBoot',         type:'Enumeration', def:'Disabled', disp:'Secure Boot State',   dispZh:'安全启动状态',    help:'Only signed bootloaders allowed.',      helpZh:'仅允许签名引导程序。', menu:'./Security', val:[E('Enabled'),E('Disabled')], ro:true, rb:true },
-        { name:'SecureBootMode',     type:'Enumeration', def:'Standard', disp:'Secure Boot Mode',    dispZh:'安全启动模式',    help:'Standard=MS keys; Custom=user keys.',    helpZh:'标准=微软；自定义=用户。', menu:'./Security', val:[E('Standard'),E('Custom')], rb:true },
-        { name:'TpmState',           type:'Enumeration', def:'Enabled',  disp:'TPM State',           dispZh:'TPM 状态',        help:'Trusted Platform Module (2.0).',         helpZh:'可信平台模块(2.0)。', menu:'./Security', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'TpmActivePcrBanks',  type:'Enumeration', def:'SHA256',   disp:'TPM PCR Banks',       dispZh:'TPM PCR存储区',   help:'Active PCR bank hash algorithm.',        helpZh:'活动PCR存储区算法。', menu:'./Security', val:[E('SHA1'),E('SHA256'),EN('SHA1_SHA256','SHA1+SHA256')], rb:true },
-        { name:'TpmClear',           type:'Enumeration', def:'No',       disp:'Clear TPM',           dispZh:'清除TPM',         help:'Clear TPM ownership and keys.',          helpZh:'清除TPM所有权和密钥。', menu:'./Security', val:[E('No'),EN('YesReset','Yes, Next Reset')], rb:true },
-        { name:'Tpm2FirmwareUpdate', type:'Enumeration', def:'Enabled',  disp:'TPM FW Update',       dispZh:'TPM 固件更新',    help:'Allow TPM 2.0 firmware update.',          helpZh:'允许TPM固件更新。', menu:'./Security', val:[E('Enabled'),E('Disabled')] },
-        { name:'AdminPassword',      type:'Password',    def:null,       disp:'Admin Password',      dispZh:'管理员密码',      help:'BIOS admin password (8-32 chars).',      helpZh:'BIOS管理员密码(8-32字符)。', menu:'./Security', mn:8, mx:32 },
-        { name:'UserPassword',       type:'Password',    def:null,       disp:'User Password',       dispZh:'用户密码',        help:'BIOS user password (8-32 chars).',       helpZh:'BIOS用户密码(8-32字符)。', menu:'./Security', mn:8, mx:32 },
-        { name:'ChassisIntrusion',   type:'Enumeration', def:'Disabled', disp:'Chassis Intrusion',   dispZh:'机箱入侵检测',    help:'Detect and log chassis cover open.',      helpZh:'检测机箱盖开启并记录。', menu:'./Security', val:[E('Enabled'),E('Disabled')] },
-
-        // ---- Power ----
-        { name:'PowerPolicy',          type:'Enumeration', def:'Efficient',disp:'Power Policy',       dispZh:'电源策略',        help:'Overall system power management.',        helpZh:'整体电源管理策略。', menu:'./Power', val:[EN('Perf','Max Performance'),EN('Efficient','Efficient'),EN('Save','Power Saving')], rb:true },
-        { name:'AcPowerRestorePolicy', type:'Enumeration', def:'LastState',disp:'AC Power Restore',   dispZh:'交流电恢复策略',  help:'Behavior after AC power loss.',             helpZh:'交流断电恢复行为。', menu:'./Power', val:[EN('Off','Always Off'),EN('On','Always On'),EN('LastState','Last State')] },
-        { name:'PowerOnByLAN',         type:'Enumeration', def:'Enabled', disp:'Wake-on-LAN',        dispZh:'网络唤醒',        help:'Power on via magic packet.',               helpZh:'网络Magic Packet唤醒。', menu:'./Power', val:[E('Enabled'),E('Disabled')] },
-        { name:'PowerOnDelay',         type:'Integer',     def:0,        disp:'Power-On Delay (s)',  dispZh:'开机延迟(秒)',    help:'Delay after AC restore before power on.',  helpZh:'交流恢复后开机延迟。', menu:'./Power', lb:0, ub:600, st:5 },
-        { name:'FanControlMode',       type:'Enumeration', def:'Auto',   disp:'Fan Control Mode',    dispZh:'风扇控制模式',    help:'Auto=BIOS; Manual=user profile.',          helpZh:'Auto=BIOS；Manual=用户。', menu:'./Power', val:[E('Auto'),E('Manual')] },
-        { name:'FanSpeedLowLimit',     type:'Integer',     def:20,       disp:'Fan Speed Min (%)',   dispZh:'风扇最低转速(%)', help:'Minimum fan speed percentage.',            helpZh:'风扇最低转速百分比。', menu:'./Power', lb:5, ub:100, st:5 },
-        { name:'PowerCapEnable',       type:'Enumeration', def:'Disabled',disp:'Power Capping',      dispZh:'功率封顶',        help:'Limit system power consumption.',          helpZh:'限制系统功耗。', menu:'./Power', val:[E('Enabled'),E('Disabled')], sc:'百度' },
-        { name:'PowerCapValue',        type:'Integer',     def:800,      disp:'Power Cap Value (W)', dispZh:'功率封顶值(瓦)',  help:'Max power when capping is active.',        helpZh:'功率封顶最大功耗。', menu:'./Power', lb:100, ub:3000, st:10, sc:'百度' },
-        { name:'RtcWakeup',            type:'Enumeration', def:'Disabled',disp:'RTC Wakeup Timer',   dispZh:'RTC 定时开机',    help:'Auto power-on at scheduled time.',         helpZh:'定时自动开机。', menu:'./Power', val:[E('Enabled'),E('Disabled')] },
-
-        // ---- Advanced (CPU prefetchers, PCIe, USB, Serial) ----
-        { name:'HardwarePrefetcher',    type:'Enumeration', def:'Enabled',  disp:'Hardware Prefetcher',  dispZh:'硬件预取器',        help:'L2 cache hardware prefetcher.',           helpZh:'L2缓存硬件预取。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'AdjacentCachePrefetch', type:'Enumeration', def:'Enabled',  disp:'Adjacent Cache Prefetch',dispZh:'邻接缓存预取',   help:'128-byte adjacent cache line prefetch.',   helpZh:'128字节邻接缓存行预取。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'DCUStreamPrefetcher',   type:'Enumeration', def:'Enabled',  disp:'DCU Stream Prefetch',  dispZh:'DCU 流预取器',      help:'L1 data cache stream prefetcher.',        helpZh:'L1数据缓存流预取。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'DCUIPPrefetcher',       type:'Enumeration', def:'Enabled',  disp:'DCU IP Prefetch',      dispZh:'DCU IP 预取器',      help:'L1 DCU IP-based prefetcher.',             helpZh:'L1指令指针预取。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'LLCPrefetch',           type:'Enumeration', def:'Enabled',  disp:'LLC Prefetch',         dispZh:'LLC 预取',           help:'Last Level Cache prefetch.',              helpZh:'最后一级缓存预取。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'XptPrefetch',           type:'Enumeration', def:'Enabled',  disp:'XPT Remote Prefetch',  dispZh:'XPT 远程预取',       help:'Multi-socket remote cache prefetch.',     helpZh:'多路远程缓存预取。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'AESNI',                 type:'Enumeration', def:'Enabled',  disp:'Intel AES-NI',         dispZh:'AES-NI 指令集',      help:'Hardware-accelerated AES encryption.',    helpZh:'硬件加速AES加密。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'IntelSGX',              type:'Enumeration', def:'Disabled', disp:'Intel SGX',            dispZh:'SGX 软件保护扩展',   help:'Hardware-enforced enclave security.',     helpZh:'硬件强制内存加密可信环境。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'IntelTME',              type:'Enumeration', def:'Disabled', disp:'Intel TME',            dispZh:'全内存加密(TME)',    help:'Hardware-based full memory encryption.',  helpZh:'基于硬件全内存加密。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'IntelSMX',              type:'Enumeration', def:'Enabled',  disp:'Intel SMX',            dispZh:'安全模式扩展(SMX)',  help:'Safer Mode Extensions for Intel TXT.',    helpZh:'Intel TXT安全模式。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        // PCIe
-        { name:'Above4GDecoding',   type:'Enumeration', def:'Enabled',  disp:'Above 4G Decoding',  dispZh:'4G以上地址解码',    help:'64-bit PCIe BAR address space.',          helpZh:'64位PCIe BAR地址空间。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'ResizableBAR',      type:'Enumeration', def:'Enabled',  disp:'Re-Size BAR',        dispZh:'可调整BAR',          help:'PCIe resizable BAR for GPUs.',            helpZh:'GPU可调整BAR。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'PcieAspmSupport',   type:'Enumeration', def:'Auto',     disp:'PCIe ASPM',          dispZh:'PCIe ASPM 节能',     help:'Active State Power Management.',          helpZh:'主动状态电源管理。', menu:'./Advanced', val:[E('Auto'),E('Enabled'),E('Disabled')] },
-        { name:'PcieMaxLinkSpeed',  type:'Enumeration', def:'Auto',     disp:'PCIe Max Link Speed', dispZh:'PCIe 最大链路速率',  help:'Limit max PCIe speed (Gen5 capable).',    helpZh:'限制PCIe最大速率(支持Gen5)。', menu:'./Advanced', val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4'),E('Gen5')], rb:true },
-        { name:'SriovPCIe',         type:'Enumeration', def:'Disabled', disp:'SR-IOV (PCIe)',       dispZh:'PCIe SR-IOV',        help:'Global PCIe SR-IOV enable. Needs VT-d.',  helpZh:'全局PCIe SR-IOV。需VT-d启用。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'Pcie10BitTag',      type:'Enumeration', def:'Enabled',  disp:'PCIe 10-bit Tag',    dispZh:'PCIe 10位标签',      help:'Expanded tag for more outstanding reqs.', helpZh:'扩展标签增加未完成请求。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'MmioAbove4GbSize',  type:'Enumeration', def:'Auto',     disp:'MMIO Above 4GB',     dispZh:'MMIO 4GB以上空间',   help:'Memory-mapped I/O space above 4GB.',      helpZh:'4GB以上MMIO空间。', menu:'./Advanced', val:[E('Auto'),E('64G'),E('128G'),E('256G'),E('512G')], rb:true },
-        // USB
-        { name:'UsbPortsAll',        type:'Enumeration', def:'Enabled', disp:'All USB Ports',        dispZh:'所有USB端口',        help:'Global USB ports switch.',               helpZh:'全局USB端口开关。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'UsbFrontPorts',      type:'Enumeration', def:'Enabled', disp:'Front USB Ports',      dispZh:'前置USB端口',        help:'Front panel USB 3.0 ports.',             helpZh:'前面板USB 3.0。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        { name:'UsbRearPorts',       type:'Enumeration', def:'Enabled', disp:'Rear USB Ports',       dispZh:'后置USB端口',        help:'Rear panel USB 3.0 ports.',              helpZh:'后面板USB 3.0。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        { name:'UsbInternalPorts',   type:'Enumeration', def:'Enabled', disp:'Internal USB Ports',   dispZh:'内部USB端口',        help:'Internal USB for dongles/keys.',         helpZh:'内部USB加密狗。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        { name:'UsbBootSupport',     type:'Enumeration', def:'Enabled', disp:'USB Boot Support',     dispZh:'USB 启动支持',       help:'Allow booting from USB devices.',        helpZh:'允许USB设备启动。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        { name:'UsbMassStorageDriver',type:'Enumeration',def:'Enabled',  disp:'USB Mass Storage',    dispZh:'USB 大容量存储驱动', help:'UEFI USB mass storage driver.',          helpZh:'UEFI USB大容量存储驱动。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        { name:'VGA_Primary',        type:'Enumeration', def:'Auto',    disp:'Primary Video',        dispZh:'主显示适配器',      help:'Primary display adapter selection.',      helpZh:'主显示适配器选择。', menu:'./Advanced', val:[E('Auto'),EN('Onboard','Onboard VGA'),EN('PCIe','PCIe VGA')], rb:true },
-        // Serial
-        { name:'SerialAEnabled',    type:'Enumeration', def:'Enabled',  disp:'Serial Port A (COM1)', dispZh:'串口A (COM1)',        help:'Serial port A enable/disable.',           helpZh:'串口A启用/禁用。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'SerialBEnabled',    type:'Enumeration', def:'Disabled', disp:'Serial Port B (COM2)', dispZh:'串口B (COM2)',        help:'Serial port B enable/disable.',           helpZh:'串口B启用/禁用。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'SerialBaudRate',    type:'Enumeration', def:'115200',   disp:'Serial Baud Rate',     dispZh:'串口波特率',         help:'Serial console baud rate.',               helpZh:'串口控制台波特率。', menu:'./Advanced', val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')] },
-        { name:'SerialFlowControl', type:'Enumeration', def:'None',     disp:'Serial Flow Control',  dispZh:'串口流控制',         help:'Serial flow control method.',             helpZh:'串口流控制方式。', menu:'./Advanced', val:[E('None'),E('Hardware'),E('Software')] },
-        { name:'ConsoleRedirect',   type:'Enumeration', def:'Enabled',  disp:'Console Redirection',  dispZh:'控制台重定向',       help:'Serial console to remote terminal.',      helpZh:'串行控制台远程终端。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        // Performance
-        { name:'PerfProfile',           type:'Enumeration', def:'Efficient', disp:'Performance Profile',dispZh:'性能配置档',          help:'Pre-defined performance tuning.',         helpZh:'预定义性能调优。', menu:'./Advanced', val:[EN('MaxPerf','Max Performance'),EN('Efficient','Efficient'),EN('Latency','Latency Opt'),EN('Throughput','Throughput Opt')], rb:true },
-        { name:'EnergyEfficientTurbo',  type:'Enumeration', def:'Enabled',  disp:'Energy Efficient Turbo',dispZh:'节能Turbo',        help:'Optimized Turbo for performance/watt.',   helpZh:'优化Turbo最佳每瓦性能。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')] },
-        { name:'WorkloadConfig',        type:'Enumeration', def:'General',  disp:'Workload Config',     dispZh:'工作负载配置',        help:'System tuning for workload type.',         helpZh:'工作负载类型系统调优。', menu:'./Advanced', val:[E('General'),EN('IOIntensive','I/O Intensive'),EN('ComputeIntensive','Compute Intensive')], sc:'百度', rb:true },
-        { name:'SubNumaClustering',     type:'Enumeration', def:'Disabled', disp:'Sub-NUMA Clustering', dispZh:'子NUMA集群(SNC)',     help:'Split LLC into independent NUMA domains.', helpZh:'拆分LLC为独立NUMA域。', menu:'./Advanced', val:[E('Enabled'),E('Disabled')], rb:true },
-        { name:'DdrSpeedOptimization',  type:'Enumeration', def:'Balanced', disp:'DDR Speed Optimize',  dispZh:'DDR 速率优化',        help:'DDR5 timing optimization.',                helpZh:'DDR5时序优化。', menu:'./Advanced', val:[EN('Balanced','Balanced'),EN('Performance','Performance'),EN('Stability','Stability')], rb:true },
-
-        // ---- Server Mgmt ----
-        { name:'BmcWatchdog',          type:'Enumeration', def:'Enabled',  disp:'BMC Watchdog',        dispZh:'BMC 看门狗',         help:'Reset system if OS unresponsive.',       helpZh:'OS无响应时自动复位。', menu:'./ServerMgmt', val:[E('Enabled'),E('Disabled')] },
-        { name:'BmcWatchdogTimeout',   type:'Integer',     def:300,        disp:'Watchdog Timeout (s)',dispZh:'看门狗超时(秒)',    help:'Seconds before watchdog triggers reset.',helpZh:'看门狗超时秒数。', menu:'./ServerMgmt', lb:30, ub:1800, st:30 },
-        { name:'OsWatchdogTimer',      type:'Enumeration', def:'Enabled',  disp:'OS Watchdog',         dispZh:'OS 看门狗',          help:'OS-level boot supervision watchdog.',    helpZh:'OS级启动监控看门狗。', menu:'./ServerMgmt', val:[E('Enabled'),E('Disabled')] },
-        { name:'SolEnabled',           type:'Enumeration', def:'Enabled',  disp:'Serial Over LAN',     dispZh:'SOL 局域网串口',     help:'Remote console via BMC SOL.',            helpZh:'BMC SOL远程控制台。', menu:'./ServerMgmt', val:[E('Enabled'),E('Disabled')] },
-        { name:'BmcLanMode',           type:'Enumeration', def:'Dedicated',disp:'BMC LAN Mode',        dispZh:'BMC 网络模式',       help:'Dedicated or shared management port.',   helpZh:'专用或共享管理口。', menu:'./ServerMgmt', val:[E('Dedicated'),EN('SharedLOM','Shared LOM')], sc:'百度' },
-        { name:'ErpLot6PowerMode',     type:'Enumeration', def:'Disabled', disp:'ERP Lot 6',           dispZh:'ERP Lot 6 节能',     help:'EU ERP Lot 6 deep power saving mode.',   helpZh:'欧盟ERP Lot 6深度节能。', menu:'./ServerMgmt', val:[E('Enabled'),E('Disabled')] },
-        { name:'SysMaintenanceSwitch', type:'Enumeration', def:'Disabled', disp:'Maintenance Switch',  dispZh:'维护模式',           help:'Bypass certain boot security checks.',   helpZh:'绕过启动安全检查。', menu:'./ServerMgmt', val:[E('Enabled'),E('Disabled')], sc:'百度' },
-        { name:'BmcIPv4Address',       type:'String',      def:'192.168.1.100',disp:'BMC IPv4',        dispZh:'BMC IPv4',           help:'BMC management IP address.',             helpZh:'BMC管理IP地址。', menu:'./ServerMgmt', ro:true },
-        { name:'BmcMacAddress',        type:'String',      def:'00:1B:2C:3D:4E:5F',disp:'BMC MAC',     dispZh:'BMC MAC',            help:'BMC management MAC address.',            helpZh:'BMC管理MAC地址。', menu:'./ServerMgmt', ro:true },
-
-        // ---- Misc ----
-        { name:'NumLock',               type:'Enumeration', def:'On',       disp:'NumLock',              dispZh:'数字锁定状态',      help:'Initial NumLock at boot.',               helpZh:'启动时NumLock状态。', menu:'./Misc', val:[E('On'),E('Off')] },
-        { name:'CpuErrLog',             type:'Enumeration', def:'Enabled',  disp:'CPU Error Logging',    dispZh:'CPU 错误日志',       help:'Log processor machine check errors.',     helpZh:'记录处理器机器检查错误。', menu:'./Misc', val:[E('Enabled'),E('Disabled')] },
-        { name:'MemErrLog',             type:'Enumeration', def:'Enabled',  disp:'Memory Error Logging', dispZh:'内存错误日志',      help:'Log memory ECC errors.',                  helpZh:'记录内存ECC错误。', menu:'./Misc', val:[E('Enabled'),E('Disabled')] },
-        { name:'PcieErrLog',            type:'Enumeration', def:'Enabled',  disp:'PCIe Error Logging',   dispZh:'PCIe 错误日志',      help:'Log PCIe correctable/uncorrectable errors.', helpZh:'记录PCIe可纠正/不可纠正错误。', menu:'./Misc', val:[E('Enabled'),E('Disabled')] },
-        { name:'WheaSupport',           type:'Enumeration', def:'Enabled',  disp:'WHEA Support',         dispZh:'WHEA 支持',          help:'Windows Hardware Error Architecture.',    helpZh:'Windows硬件错误架构。', menu:'./Misc', val:[E('Enabled'),E('Disabled')] },
-        { name:'ConsoleRedirectType',   type:'Enumeration', def:'VT-UTF8',  disp:'Console Type',         dispZh:'控制台终端类型',    help:'Terminal emulation for console redirect.',helpZh:'控制台重定向终端仿真。', menu:'./Misc', val:[EN('VT100','VT-100'),EN('VT100+','VT-100+'),EN('VT-UTF8','VT-UTF8'),EN('ANSI','ANSI')] },
-        { name:'PxeIpVersion',          type:'Enumeration', def:'IPv4',     disp:'PXE IP Version',       dispZh:'PXE IP 版本',        help:'Default IP version for PXE boot.',        helpZh:'PXE启动默认IP版本。', menu:'./Misc', val:[E('IPv4'),E('IPv6')] },
+        { name:'SystemUUID',type:'String',def:"00000000-0000-0000-0000-000000000000",disp:'System UUID',dispZh:'系统UUID',help:'Unique 128-bit identifier for this system instance used by management software.',menu:'./Main',ro:true,sr:false },
+        { name:'BIOSVersion',type:'String',def:"RS26G6.02.00.002",disp:'BIOS Version',dispZh:'BIOS版本',help:'Current BIOS firmware version string.',menu:'./Main',ro:true },
+        { name:'BMCVersion',type:'String',def:"v2.2.0",disp:'BMC Version',dispZh:'BMC版本',help:'Current BMC firmware version.',menu:'./Main',ro:true },
+        { name:'CPLDVersion',type:'String',def:"v1.04",disp:'CPLD Version',dispZh:'CPLD版本',help:'Current CPLD firmware version.',menu:'./Main',ro:true },
+        { name:'PlatformName',type:'String',def:"RS2600G6",disp:'Platform Name',dispZh:'平台名称',help:'Hardware platform identifier for OS and driver optimizations.',menu:'./Main',ro:true },
+        { name:'MemoryTotalSize',type:'String',def:"0 GB",disp:'Total Memory',dispZh:'内存总量',help:'Total physical memory detected during POST from SPD data.',menu:'./Main',ro:true },
+        { name:'CPUModel',type:'String',def:"Intel Xeon Gold 64xx",disp:'CPU Model',dispZh:'CPU型号',help:'Processor model string reported by CPUID instruction.',menu:'./Main',ro:true },
+        { name:'AssetTag',type:'String',def:"",disp:'Asset Tag',dispZh:'资产标签',help:'User-defined string for asset tracking and inventory management.',menu:'./Main' },
+        { name:'HyperThreading',type:'Enumeration',def:"Enabled",disp:'Hyper-Threading',dispZh:'超线程技术',help:'Intel Hyper-Threading Technology. Each physical core appears as two logical processors.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'VTxSupport',type:'Enumeration',def:"Enabled",disp:'Intel VT-x',dispZh:'Intel VT-x',help:'Intel VT-x for hardware-assisted CPU virtualization. Required for VMware, KVM, Hyper-V.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'VtdSupport',type:'Enumeration',def:"Enabled",disp:'Intel VT-d',dispZh:'Intel VT-d',help:'Intel VT-d for DMA remapping and interrupt remapping. Required for PCIe device passthrough.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'SMX',type:'Enumeration',def:"Enabled",disp:'SMX',dispZh:'SMX安全扩展',help:'Safer Mode Extensions for measured launch. Required for Intel TXT.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'TurboMode',type:'Enumeration',def:"Enabled",disp:'Turbo Mode',dispZh:'睿频加速',help:'Intel Turbo Boost dynamically increases CPU frequency within thermal and power limits.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'CStateControl',type:'Enumeration',def:"Enabled",disp:'Processor C-States',dispZh:'C状态控制',help:'Enable processor C-States for power saving. Disabled limits to C0/C1 only.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'C1EAuto',type:'Enumeration',def:"Enabled",disp:'C1E Auto',dispZh:'C1E自动',help:'Auto-transition to enhanced C1E halt state when all cores idle.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'MonitorMWAIT',type:'Enumeration',def:"Enabled",disp:'Monitor/MWAIT',dispZh:'Monitor/MWAIT',help:'Enable MONITOR/MWAIT for OS-level idle power management.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'MachineCheck',type:'Enumeration',def:"Enabled",disp:'Machine Check',dispZh:'机器检查',help:'Enable Machine Check Architecture for hardware error detection.',menu:'./Advanced/ProcessorOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'ACPI_L3_Latency',type:'Integer',def:48,disp:'ACPI L3 Latency (ns)',dispZh:'ACPI L3延迟',help:'Report L3 cache latency to ACPI tables for OS scheduling.',menu:'./Advanced/ProcessorOptions',lb:0,ub:255,st:1 },
+        { name:'MLCStreamPrefetch',type:'Enumeration',def:"Enabled",disp:'MLC Stream Prefetch',dispZh:'MLC流预取',help:'MLC stream prefetcher for sequential data streams in mid-level cache.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'MLCSpatialPrefetch',type:'Enumeration',def:"Enabled",disp:'MLC Spatial Prefetch',dispZh:'MLC空间预取',help:'MLC spatial prefetcher for adjacent cache lines in same page.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'DCUStreamPrefetch',type:'Enumeration',def:"Enabled",disp:'DCU Stream Prefetch',dispZh:'DCU流预取',help:'DCU stream prefetcher detects sequential patterns for L1 data cache.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'DCUIPPrefetch',type:'Enumeration',def:"Enabled",disp:'DCU IP Prefetch',dispZh:'DCU IP预取',help:'DCU IP-based prefetcher using load history to predict future addresses.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'LLCPrefetch',type:'Enumeration',def:"Enabled",disp:'LLC Prefetch',dispZh:'LLC预取',help:'LLC prefetcher reduces off-chip latency via shared L3 cache.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'AdjacentCachePrefetch',type:'Enumeration',def:"Enabled",disp:'Adjacent Cache Prefetch',dispZh:'相邻缓存预取',help:'Prefetch adjacent cache lines into L2 for spatial locality workloads.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'XPT_Prefetch',type:'Enumeration',def:"Auto",disp:'XPT Prefetch',dispZh:'XPT预取',help:'Extended Prefetch Training. Auto adjusts aggressiveness dynamically.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'L2RFO_Prefetch',type:'Enumeration',def:"Enabled",disp:'L2 RFO Prefetch',dispZh:'L2 RFO预取',help:'L2 Read-For-Ownership prefetcher reduces coherence traffic for writes.',menu:'./Advanced/ProcessorOptions/PrefetcherConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'ActiveCores',type:'Enumeration',def:"All",disp:'Active Cores',dispZh:'活动核心数',help:'Number of active processor cores. Fewer cores reduce power, increase turbo.',menu:'./Advanced/ProcessorOptions/CoreConfig',val:[E('All'),E('Half'),E('Quarter')] },
+        { name:'Enable_AES',type:'Enumeration',def:"Enabled",disp:'AES-NI',dispZh:'AES指令集',help:'Intel AES-NI for hardware-accelerated encryption/decryption.',menu:'./Advanced/ProcessorOptions/CoreConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'Enable_AVX',type:'Enumeration',def:"Enabled",disp:'AVX Support',dispZh:'AVX支持',help:'Intel AVX for 256-bit SIMD vector operations.',menu:'./Advanced/ProcessorOptions/CoreConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'AVX512_Enable',type:'Enumeration',def:"Enabled",disp:'AVX-512',dispZh:'AVX-512',help:'Intel AVX-512 for 512-bit vector operations. Highest throughput for HPC/AI.',menu:'./Advanced/ProcessorOptions/CoreConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'LimitCPUID',type:'Enumeration',def:"Disabled",disp:'Limit CPUID Max',dispZh:'限制CPUID',help:'Limit maximum CPUID value for legacy OS compatibility.',menu:'./Advanced/ProcessorOptions/CoreConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PerCoreHT',type:'Enumeration',def:"Auto",disp:'Per Core HT',dispZh:'按核超线程',help:'Per-core Hyper-Threading control. Auto follows global setting.',menu:'./Advanced/ProcessorOptions/CoreConfig/PerCore',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'PerCorePState',type:'Enumeration',def:"Auto",disp:'Per Core P-State',dispZh:'按核P状态',help:'Per-core P-State frequency control for asymmetric configuration.',menu:'./Advanced/ProcessorOptions/CoreConfig/PerCore',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'PerCoreCState',type:'Enumeration',def:"Auto",disp:'Per Core C-State',dispZh:'按核C状态',help:'Per-core C-State power management for fine-grained idle control.',menu:'./Advanced/ProcessorOptions/CoreConfig/PerCore',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'Core_C1E_Limit',type:'Enumeration',def:"C6",disp:'C1E State Limit',dispZh:'C1E限制',help:'Maximum C-State for C1E transitions. NoLimit allows deepest states.',menu:'./Advanced/ProcessorOptions/CoreConfig/PerCore/CoreStateLimit',val:[E('C3'),E('C6'),E('C7'),E('NoLimit')] },
+        { name:'Core_C6_Limit',type:'Enumeration',def:"C6",disp:'C6 State Limit',dispZh:'C6限制',help:'Maximum C-State for C6 packet transitions. Deeper states save more power.',menu:'./Advanced/ProcessorOptions/CoreConfig/PerCore/CoreStateLimit',val:[E('C3'),E('C6'),E('C7'),E('NoLimit')] },
+        { name:'UPILinkSpeed',type:'Enumeration',def:"Auto",disp:'UPI Link Speed',dispZh:'UPI速率',help:'UPI link data rate in GT/s for multi-socket bandwidth.',menu:'./Advanced/ProcessorOptions/UPIConfig',val:[E('Auto'),E('9.6 GT/s'),E('10.4 GT/s'),E('11.2 GT/s')] },
+        { name:'UPILinkFreq',type:'Enumeration',def:"Auto",disp:'UPI Link Frequency',dispZh:'UPI频率',help:'UPI link reference clock frequency in MHz.',menu:'./Advanced/ProcessorOptions/UPIConfig',val:[E('Auto'),E('2400 MHz'),E('2666 MHz'),E('2933 MHz')] },
+        { name:'UPIPrefetch',type:'Enumeration',def:"Enabled",disp:'UPI Prefetch',dispZh:'UPI预取',help:'Speculative prefetch across UPI links from remote socket memory.',menu:'./Advanced/ProcessorOptions/UPIConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'UPI_DCA',type:'Enumeration',def:"Enabled",disp:'UPI DCA',dispZh:'UPI DCA',help:'Direct Cache Access over UPI for I/O data placement in CPU cache.',menu:'./Advanced/ProcessorOptions/UPIConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'StaleAtoSOpt',type:'Enumeration',def:"Enabled",disp:'Stale A-to-S',dispZh:'陈旧AtoS',help:'Stale A-to-S optimization for cache coherence snoop latency reduction.',menu:'./Advanced/ProcessorOptions/UPIConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'LLCDeadAlloc',type:'Enumeration',def:"Enabled",disp:'LLC Dead Line Alloc',dispZh:'LLC死线分配',help:'LLC dead line allocation to prevent cache thrashing.',menu:'./Advanced/ProcessorOptions/UPIConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'FastString',type:'Enumeration',def:"Enabled",disp:'Fast String Ops',dispZh:'快速字符串',help:'Enable REP MOVS/STOS fast string operations for memory copy.',menu:'./Advanced/ProcessorOptions/RAS_Advanced',val:[E('Enabled'),E('Disabled')] },
+        { name:'NoExecute_MemProtection',type:'Enumeration',def:"Enabled",disp:'XD Bit (NX)',dispZh:'XD位',help:'XD/NX bit prevents code execution from data memory pages.',menu:'./Advanced/ProcessorOptions/RAS_Advanced',val:[E('Enabled'),E('Disabled')] },
+        { name:'SPP_Correction',type:'Enumeration',def:"Enabled",disp:'SPP Correction',dispZh:'SPP纠正',help:'Soft Patch Panel for runtime processor errata corrections.',menu:'./Advanced/ProcessorOptions/RAS_Advanced',val:[E('Enabled'),E('Disabled')] },
+        { name:'PagePolicy',type:'Enumeration',def:"Adaptive",disp:'Page Policy',dispZh:'页面策略',help:'Memory page policy. Adaptive balances Open/Closed based on access patterns.',menu:'./Advanced/ProcessorOptions/RAS_Advanced',val:[E('Adaptive'),E('Closed'),E('Open')] },
+        { name:'MemSpeed',type:'Enumeration',def:"Auto",disp:'Memory Speed',dispZh:'内存速率',help:'Memory frequency in MT/s. Auto selects optimal based on DIMM SPD.',menu:'./Advanced/MemoryConfig',val:[E('Auto'),E('4800 MT/s'),E('4400 MT/s'),E('4000 MT/s'),E('3600 MT/s'),E('3200 MT/s')],rb:true },
+        { name:'NUMAOptimization',type:'Enumeration',def:"Enabled",disp:'NUMA Optimization',dispZh:'NUMA优化',help:'Enable NUMA-aware memory topology for the operating system.',menu:'./Advanced/MemoryConfig',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'SubNUMA_Cluster',type:'Enumeration',def:"Auto",disp:'Sub-NUMA Cluster',dispZh:'子NUMA集群',help:'Split each socket into two NUMA domains for local memory latency.',menu:'./Advanced/MemoryConfig',val:[E('Auto'),E('Enabled'),E('Disabled')],rb:true },
+        { name:'IMC_Bclk',type:'Enumeration',def:"133",disp:'IMC BCLK (MHz)',dispZh:'IMC基准时钟',help:'Integrated Memory Controller base clock in MHz.',menu:'./Advanced/MemoryConfig',val:[E('100'),E('133')],rb:true },
+        { name:'MemTestOnBoot',type:'Enumeration',def:"Fast",disp:'Memory Test on Boot',dispZh:'开机内存测试',help:'POST memory test. Full checks every cell; Fast runs quick patterns.',menu:'./Advanced/MemoryConfig',val:[E('Full'),E('Fast'),E('Disabled')] },
+        { name:'ColdMemTest',type:'Enumeration',def:"Full",disp:'Cold Boot Mem Test',dispZh:'冷启动内存测试',help:'Memory test performed only on cold boot from S5 power-on state.',menu:'./Advanced/MemoryConfig',val:[E('Full'),E('Short'),E('Disabled')] },
+        { name:'ECCSupport',type:'Enumeration',def:"Enabled",disp:'ECC Support',dispZh:'ECC纠错',help:'Error Correction Code for single-bit correction and multi-bit detection.',menu:'./Advanced/MemoryConfig',val:[E('Enabled')],ro:true,rb:true },
+        { name:'PatrolScrub',type:'Enumeration',def:"Enabled",disp:'Patrol Scrub',dispZh:'内存巡检',help:'Background patrol scrub to detect and correct memory errors proactively.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'PatrolScrubInterval',type:'Integer',def:24,disp:'Patrol Scrub Interval (h)',dispZh:'巡检间隔',help:'Patrol scrub cycle interval in hours for correction frequency.',menu:'./Advanced/MemoryConfig/MemoryRAS',lb:1,ub:72,st:1 },
+        { name:'DemandScrub',type:'Enumeration',def:"Enabled",disp:'Demand Scrub',dispZh:'按需清理',help:'On-demand scrubbing when reading data corrects errors immediately.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'WriteCRC',type:'Enumeration',def:"Enabled",disp:'Write Data CRC',dispZh:'写入CRC',help:'CRC protection from memory controller to DRAM for data integrity.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'MemHClk',type:'Enumeration',def:"Enabled",disp:'Memory Half Clock',dispZh:'半时钟',help:'Memory half-clock mode for power savings at reduced bandwidth.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'ADR_DataSave',type:'Enumeration',def:"Enabled",disp:'ADR Data Save',dispZh:'ADR数据保存',help:'ADR data save on power loss to protect critical buffered data.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'ErrInjection',type:'Enumeration',def:"Disabled",disp:'Error Injection',dispZh:'错误注入',help:'Artificial error injection for RAS testing only. Not for production.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'MemErrThreshold',type:'Integer',def:10,disp:'Error Threshold',dispZh:'错误阈值',help:'Correctable error threshold before predictive failure alert.',menu:'./Advanced/MemoryConfig/MemoryRAS',lb:1,ub:100,st:1 },
+        { name:'PostPackageRepair',type:'Enumeration',def:"Enabled",disp:'POST Package Repair',dispZh:'POST修复',help:'POST-time package repair maps out bad cells using spare rows/columns.',menu:'./Advanced/MemoryConfig/MemoryRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'MemRefreshRate',type:'Enumeration',def:"1x",disp:'Memory Refresh Rate',dispZh:'刷新速率',help:'DRAM refresh interval multiplier for data retention reliability.',menu:'./Advanced/MemoryConfig/MemoryTiming',val:[E('1x (normal)'),E('2x'),E('4x (high reliability)')] },
+        { name:'tRFC_Timing',type:'Enumeration',def:"Auto",disp:'tRFC Timing',dispZh:'tRFC时序',help:'Row Refresh Cycle Time for stability with high-density DIMMs.',menu:'./Advanced/MemoryConfig/MemoryTiming',val:[E('Auto'),E('Normal'),E('Extended')] },
+        { name:'CMD2T_Mode',type:'Enumeration',def:"Auto",disp:'Command 2T Mode',dispZh:'2T命令',help:'DRAM command rate. 1T=lower latency; 2T=better stability at speed.',menu:'./Advanced/MemoryConfig/MemoryTiming',val:[E('Auto'),E('1T'),E('2T')] },
+        { name:'BankGroupSwap',type:'Enumeration',def:"Auto",disp:'Bank Group Swap',dispZh:'Bank组交换',help:'Swap physical bank group mapping to optimize row buffer hit rates.',menu:'./Advanced/MemoryConfig/MemoryTiming',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'MemInterleaveGran',type:'Enumeration',def:"Auto",disp:'Interleave Granularity',dispZh:'交织粒度',help:'Memory interleave block size for access distribution.',menu:'./Advanced/MemoryConfig/MemoryInterleave',val:[E('Auto'),E('256B'),E('4KB'),E('1GB')] },
+        { name:'MemInterleaveSize',type:'Enumeration',def:"Auto",disp:'Interleave Size',dispZh:'交织大小',help:'Number of channels to interleave for parallel bandwidth.',menu:'./Advanced/MemoryConfig/MemoryInterleave',val:[E('Auto'),E('1-Way'),E('2-Way'),E('4-Way'),E('8-Way')] },
+        { name:'ChanInterleave',type:'Enumeration',def:"Auto",disp:'Channel Interleave',dispZh:'通道交织',help:'Distribute cache lines across channels for maximum bandwidth.',menu:'./Advanced/MemoryConfig/MemoryInterleave',val:[E('Auto'),E('1-Way'),E('2-Way'),E('4-Way')] },
+        { name:'RankInterleave',type:'Enumeration',def:"Auto",disp:'Rank Interleave',dispZh:'Rank交织',help:'Distribute accesses across DRAM ranks to reduce latency.',menu:'./Advanced/MemoryConfig/MemoryInterleave',val:[E('Auto'),E('1-Way'),E('2-Way'),E('4-Way')] },
+        { name:'SocketInterleave',type:'Enumeration',def:"Auto",disp:'Socket Interleave',dispZh:'Socket交织',help:'N-way interleave across CPU sockets for balanced bandwidth.',menu:'./Advanced/MemoryConfig/MemoryInterleave',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'RankSparing',type:'Enumeration',def:"Disabled",disp:'Rank Sparing',dispZh:'Rank备用',help:'Reserve spare DRAM rank to replace failing rank at capacity cost.',menu:'./Advanced/MemoryConfig/MemorySparing',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'BankSparing',type:'Enumeration',def:"Disabled",disp:'Bank Sparing',dispZh:'Bank备用',help:'Reserve spare banks within each rank for finer-grained sparing.',menu:'./Advanced/MemoryConfig/MemorySparing',val:[E('Enabled'),E('Disabled')] },
+        { name:'MemMirroring',type:'Enumeration',def:"Disabled",disp:'Memory Mirroring',dispZh:'内存镜像',help:'Full memory mirroring duplicates writes across channels.',menu:'./Advanced/MemoryConfig/MemorySparing',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'PartialMirrorRatio',type:'Enumeration',def:"Auto",disp:'Partial Mirror Ratio',dispZh:'部分镜像比例',help:'Ratio of mirrored to non-mirrored memory in partial mirroring.',menu:'./Advanced/MemoryConfig/MemorySparing',val:[E('Auto'),E('1/2'),E('1/4'),E('1/8')] },
+        { name:'ADR_SelfRefresh',type:'Enumeration',def:"Enabled",disp:'ADR Self Refresh',dispZh:'ADR自刷新',help:'ADR self-refresh preserves DRAM data during emergency power loss.',menu:'./Advanced/MemoryConfig/MemorySparing',val:[E('Enabled'),E('Disabled')] },
+        { name:'SataController',type:'Enumeration',def:"AHCI",disp:'SATA Controller Mode',dispZh:'SATA控制器',help:'SATA mode. AHCI=native queuing; RAID=firmware RAID; Disabled=off.',menu:'./Advanced/StorageConfig',val:[E('AHCI'),E('RAID'),E('Disabled')],rb:true },
+        { name:'NVMeMode',type:'Enumeration',def:"BIOS",disp:'NVMe SSD Mode',dispZh:'NVMe模式',help:'NVMe management. BIOS=legacy mode; OS=native driver passthrough.',menu:'./Advanced/StorageConfig',val:[E('BIOS'),E('OS')],rb:true },
+        { name:'BootDiskPriority',type:'Enumeration',def:"NVMe",disp:'Boot Disk Priority',dispZh:'启动盘优先级',help:'Preferred boot disk interface for boot order prioritization.',menu:'./Advanced/StorageConfig',val:[E('NVMe'),E('SATA'),E('Auto')] },
+        { name:'HDDWriteCache',type:'Enumeration',def:"Enabled",disp:'HDD Write Cache',dispZh:'硬盘写缓存',help:'HDD write-back cache for write performance; disable for data safety.',menu:'./Advanced/StorageConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'SMARTReporting',type:'Enumeration',def:"Enabled",disp:'S.M.A.R.T. Reporting',dispZh:'SMART报告',help:'S.M.A.R.T. monitoring and failure prediction during POST.',menu:'./Advanced/StorageConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'NVMeHotPlug',type:'Enumeration',def:"Enabled",disp:'NVMe Hot Plug',dispZh:'NVMe热插拔',help:'NVMe hot-plug for adding/removing drives without shutdown.',menu:'./Advanced/StorageConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'NVMeMaxSpeed',type:'Enumeration',def:"Gen5",disp:'NVMe Max Link Speed',dispZh:'NVMe最大速率',help:'PCIe link speed cap for NVMe devices for signal integrity.',menu:'./Advanced/StorageConfig',val:[E('Auto'),E('Gen5'),E('Gen4'),E('Gen3')] },
+        { name:'HDDReadAhead',type:'Enumeration',def:"Enabled",disp:'HDD Read Ahead',dispZh:'硬盘预读',help:'HDD read-ahead prefetch for improved sequential read performance.',menu:'./Advanced/StorageConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'DMA_Support',type:'Enumeration',def:"Enabled",disp:'DMA Support',dispZh:'DMA支持',help:'Direct Memory Access for storage controllers to improve I/O.',menu:'./Advanced/StorageConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'SpinUpDelay',type:'Integer',def:3,disp:'HDD Spin-Up Delay (s)',dispZh:'硬盘启动延迟',help:'HDD spin-up stagger delay to reduce peak power draw at startup.',menu:'./Advanced/StorageConfig',lb:0,ub:30,st:1 },
+        { name:'PMem_Performance',type:'Enumeration',def:"BW Optimized",disp:'PMem Performance',dispZh:'PMem性能',help:'Optane PMem performance profile for bandwidth or latency optimization.',menu:'./Advanced/StorageConfig/OptanePMem',val:[E('BW Optimized'),E('Latency Optimized'),E('Balanced')] },
+        { name:'PMem_MemoryMode',type:'Enumeration',def:"App Direct",disp:'PMem Mode',dispZh:'PMem模式',help:'App Direct=persistent storage; Memory Mode=cache-backed volatile memory.',menu:'./Advanced/StorageConfig/OptanePMem',val:[E('App Direct'),E('Memory Mode'),E('Mixed')] },
+        { name:'PMem_AppDirectSize',type:'Integer',def:0,disp:'PMem AppDirect Size (GB)',dispZh:'AppDirect大小',help:'PMem capacity in GB for App Direct mode in Mixed configuration.',menu:'./Advanced/StorageConfig/OptanePMem',lb:0,ub:6144,st:1 },
+        { name:'PMem_NamespaceLabel',type:'String',def:"",disp:'PMem Namespace Label',dispZh:'命名空间标签',help:'User-defined label for PMem namespace identification.',menu:'./Advanced/StorageConfig/OptanePMem',mx:63 },
+        { name:'PMem_SecurityFreeze',type:'Enumeration',def:"Enabled",disp:'PMem Security Freeze',dispZh:'安全冻结',help:'Freeze PMem security state to prevent runtime modification.',menu:'./Advanced/StorageConfig/OptanePMem',val:[E('Enabled'),E('Disabled')] },
+        { name:'PXEBoot',type:'Enumeration',def:"Enabled",disp:'PXE Network Boot',dispZh:'PXE网络启动',help:'PXE network boot for OS deployment from a network server.',menu:'./Advanced/NetworkStack',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'HttpBoot',type:'Enumeration',def:"Disabled",disp:'HTTP Boot',dispZh:'HTTP启动',help:'HTTP/HTTPS boot for OS installation from web servers.',menu:'./Advanced/NetworkStack',val:[E('Enabled'),E('Disabled')] },
+        { name:'iSCSIBoot',type:'Enumeration',def:"Disabled",disp:'iSCSI Boot',dispZh:'iSCSI启动',help:'Boot from iSCSI storage target over TCP/IP network.',menu:'./Advanced/NetworkStack',val:[E('Enabled'),E('Disabled')] },
+        { name:'WakeOnLan',type:'Enumeration',def:"Enabled",disp:'Wake-on-LAN',dispZh:'网络唤醒',help:'Remote wake-up via magic packet received over the network.',menu:'./Advanced/NetworkStack',val:[E('Enabled'),E('Disabled')] },
+        { name:'IPv4Stack',type:'Enumeration',def:"Enabled",disp:'IPv4 Protocol Stack',dispZh:'IPv4协议栈',help:'IPv4 protocol stack support for network boot and communication.',menu:'./Advanced/NetworkStack',val:[E('Enabled'),E('Disabled')] },
+        { name:'IPv6Stack',type:'Enumeration',def:"Enabled",disp:'IPv6 Protocol Stack',dispZh:'IPv6协议栈',help:'IPv6 protocol stack support for modern network environments.',menu:'./Advanced/NetworkStack',val:[E('Enabled'),E('Disabled')] },
+        { name:'UEFI_IPv4_HTTP',type:'Enumeration',def:"Enabled",disp:'IPv4 HTTP Boot',dispZh:'IPv4 HTTP启动',help:'IPv4 HTTP boot in UEFI mode for network deployment.',menu:'./Advanced/NetworkStack/UEFI_Network',val:[E('Enabled'),E('Disabled')] },
+        { name:'UEFI_IPv6_HTTP',type:'Enumeration',def:"Disabled",disp:'IPv6 HTTP Boot',dispZh:'IPv6 HTTP启动',help:'IPv6 HTTP boot in UEFI mode for modern networks.',menu:'./Advanced/NetworkStack/UEFI_Network',val:[E('Enabled'),E('Disabled')] },
+        { name:'UEFI_PXE_RetryCount',type:'Integer',def:4,disp:'PXE Retry Count',dispZh:'PXE重试次数',help:'Number of PXE retry attempts before next boot device.',menu:'./Advanced/NetworkStack/UEFI_Network',lb:0,ub:20,st:1 },
+        { name:'UEFI_VLAN_Enable',type:'Enumeration',def:"Disabled",disp:'UEFI VLAN Support',dispZh:'UEFI VLAN',help:'VLAN tagging for UEFI network boot traffic isolation.',menu:'./Advanced/NetworkStack/UEFI_Network',val:[E('Enabled'),E('Disabled')] },
+        { name:'UEFI_VLAN_ID',type:'Integer',def:0,disp:'UEFI VLAN ID',dispZh:'VLAN ID',help:'VLAN ID 0-4095 for UEFI network boot traffic.',menu:'./Advanced/NetworkStack/UEFI_Network',lb:0,ub:4095,st:1 },
+        { name:'iSCSI_InitiatorName',type:'String',def:"",disp:'iSCSI Initiator Name',dispZh:'iSCSI启动器',help:'iSCSI initiator IQN name for target identification.',menu:'./Advanced/NetworkStack/iSCSI_Config',mn:1,mx:256 },
+        { name:'iSCSI_IPMode',type:'Enumeration',def:"DHCP",disp:'iSCSI IP Mode',dispZh:'iSCSI IP模式',help:'iSCSI IP assignment. DHCP automatic; Static manual.',menu:'./Advanced/NetworkStack/iSCSI_Config',val:[E('DHCP'),E('Static')] },
+        { name:'iSCSI_TargetIP',type:'String',def:"",disp:'iSCSI Target IP',dispZh:'iSCSI目标IP',help:'iSCSI target storage server IP address.',menu:'./Advanced/NetworkStack/iSCSI_Config',mn:7,mx:15 },
+        { name:'iSCSI_TargetPort',type:'Integer',def:3260,disp:'iSCSI Target Port',dispZh:'iSCSI目标端口',help:'iSCSI target service port number for connections.',menu:'./Advanced/NetworkStack/iSCSI_Config',lb:1,ub:65535,st:1 },
+        { name:'iSCSI_CHAP_Enable',type:'Enumeration',def:"Disabled",disp:'iSCSI CHAP Auth',dispZh:'CHAP认证',help:'CHAP authentication for secure iSCSI connections.',menu:'./Advanced/NetworkStack/iSCSI_Config',val:[E('Enabled'),E('Disabled')] },
+        { name:'iSCSI_CHAP_User',type:'String',def:"",disp:'CHAP Username',dispZh:'CHAP用户名',help:'CHAP username credential for iSCSI authentication.',menu:'./Advanced/NetworkStack/iSCSI_Config',mn:1,mx:128 },
+        { name:'PowerPolicy',type:'Enumeration',def:"Balanced",disp:'Power Policy',dispZh:'功耗策略',help:'System power profile. MaxPerf=performance; PowerSave=lowest power.',menu:'./Advanced/PowerMgmt',val:[E('Max Performance'),E('Balanced'),E('Power Save'),E('Custom')] },
+        { name:'PowerCapEnable',type:'Enumeration',def:"Disabled",disp:'Power Cap',dispZh:'功率封顶',help:'Enable power capping to limit maximum system power consumption.',menu:'./Advanced/PowerMgmt',val:[E('Enabled'),E('Disabled')] },
+        { name:'PowerCapValue',type:'Integer',def:800,disp:'Power Cap Value (W)',dispZh:'封顶值(W)',help:'Maximum system power consumption cap in watts.',menu:'./Advanced/PowerMgmt',lb:200,ub:2000,st:50 },
+        { name:'PowerCapAction',type:'Enumeration',def:"Throttle",disp:'Power Cap Action',dispZh:'封顶动作',help:'Action when cap exceeded. Throttle reduces frequency; Shutdown off.',menu:'./Advanced/PowerMgmt',val:[E('Throttle'),E('Shutdown')] },
+        { name:'ASPMSupport',type:'Enumeration',def:"Auto",disp:'ASPM Support',dispZh:'ASPM节能',help:'ASPM for PCIe power saving. Auto allows L1; L1 Only deepest state.',menu:'./Advanced/PowerMgmt',val:[E('Auto'),E('L1 Only'),E('Disabled')] },
+        { name:'PcieHotPlugPower',type:'Enumeration',def:"Enabled",disp:'PCIe Hot Plug Power',dispZh:'PCIe热插拔供电',help:'PCIe hot-plug power management for dynamic device addition.',menu:'./Advanced/PowerMgmt',val:[E('Enabled'),E('Disabled')] },
+        { name:'EIST',type:'Enumeration',def:"Enabled",disp:'SpeedStep (EIST)',dispZh:'EIST节能',help:'Enhanced Intel SpeedStep for dynamic frequency/voltage scaling.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Enabled'),E('Disabled')] },
+        { name:'HWP',type:'Enumeration',def:"Enabled",disp:'HWP (Speed Shift)',dispZh:'HWP频率调节',help:'Hardware-controlled P-states for faster frequency transitions.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Enabled'),E('Disabled')] },
+        { name:'HWPMState',type:'Enumeration',def:"Native",disp:'HPM State',dispZh:'HPM模式',help:'Hardware Power Management. Native=firmware; OOB=BMC controlled.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Native'),E('Out-of-Band'),E('Disabled')] },
+        { name:'PStateDomain',type:'Enumeration',def:"Auto",disp:'P-State Domain',dispZh:'P状态域',help:'P-State coordination. ALL=package-wide; ONE=per-core independent.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Auto'),E('ALL'),E('ONE')] },
+        { name:'PStateLimit',type:'Enumeration',def:"Auto",disp:'P-State Limit',dispZh:'P状态限制',help:'Maximum P-State level. P0=highest frequency; lower reduces frequency.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Auto'),E('P0'),E('P1'),E('P2'),E('P3')] },
+        { name:'TStateEnable',type:'Enumeration',def:"Enabled",disp:'T-States',dispZh:'T状态',help:'Enable T-States for thermal throttling via duty cycle modulation.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Enabled'),E('Disabled')] },
+        { name:'EnergyPerfBias',type:'Enumeration',def:"Balanced",disp:'Energy Perf Bias',dispZh:'能效偏向',help:'Energy-performance bias for power management optimization.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Max Performance'),E('Balanced'),E('Power Save')] },
+        { name:'UncoreFreq',type:'Enumeration',def:"Auto",disp:'Uncore Frequency',dispZh:'非核心频率',help:'Uncore frequency for ring/mesh. Max=highest; Min=lowest power.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Auto'),E('Max'),E('Min')] },
+        { name:'CPU_PowerReport',type:'Enumeration',def:"Auto",disp:'CPU Power Report',dispZh:'CPU功耗报告',help:'CPU power report granularity: PerCPU or PerPackage.',menu:'./Advanced/PowerMgmt/CPU_Power',val:[E('Auto'),E('Per CPU'),E('Per Package')] },
+        { name:'PackageCState_Limit',type:'Enumeration',def:"Auto",disp:'Package C-State Limit',dispZh:'封装C状态',help:'Maximum package C-State. Deeper states save power, increase exit latency.',menu:'./Advanced/PowerMgmt/CPU_Power/PackageCState',val:[E('Auto'),E('C2'),E('C6'),E('C7'),E('C8'),E('C9'),E('C10'),E('NoLimit')] },
+        { name:'PKG_C1E_Auto',type:'Enumeration',def:"Enabled",disp:'Package C1E Auto',dispZh:'封装C1E',help:'Automatic package-level C1E entry when all cores idle.',menu:'./Advanced/PowerMgmt/CPU_Power/PackageCState',val:[E('Enabled'),E('Disabled')] },
+        { name:'PKG_C6_Retention',type:'Enumeration',def:"Enabled",disp:'Package C6 Retention',dispZh:'封装C6保持',help:'Package C6 retention for faster exit at slightly higher idle power.',menu:'./Advanced/PowerMgmt/CPU_Power/PackageCState',val:[E('Enabled'),E('Disabled')] },
+        { name:'UPI_LinkL0p',type:'Enumeration',def:"Enabled",disp:'UPI Link L0p',dispZh:'UPI L0p',help:'UPI L0p low-power state during low link utilization.',menu:'./Advanced/PowerMgmt/CPU_Power/UPI_Power',val:[E('Enabled'),E('Disabled')] },
+        { name:'UPI_LinkL1',type:'Enumeration',def:"Enabled",disp:'UPI Link L1',dispZh:'UPI L1',help:'UPI L1 deeper low-power state for extended idle periods.',menu:'./Advanced/PowerMgmt/CPU_Power/UPI_Power',val:[E('Enabled'),E('Disabled')] },
+        { name:'UPI_PowerGating',type:'Enumeration',def:"Enabled",disp:'UPI Power Gating',dispZh:'UPI电源门控',help:'UPI power gating to completely power down unused UPI lanes.',menu:'./Advanced/PowerMgmt/CPU_Power/UPI_Power',val:[E('Enabled'),E('Disabled')] },
+        { name:'HWPM_NativeMode',type:'Enumeration',def:"Enabled",disp:'HWPM Native Mode',dispZh:'HWPM原生',help:'HWPM native mode for firmware-controlled power management.',menu:'./Advanced/PowerMgmt/CPU_Power/PState_HWPM',val:[E('Enabled'),E('Disabled')] },
+        { name:'HWPM_OOB_Mode',type:'Enumeration',def:"Disabled",disp:'HWPM OOB Mode',dispZh:'HWPM带外',help:'HWPM Out-of-Band mode for BMC-managed power management.',menu:'./Advanced/PowerMgmt/CPU_Power/PState_HWPM',val:[E('Enabled'),E('Disabled')] },
+        { name:'HWPM_PackageControl',type:'Enumeration',def:"Enabled",disp:'HWPM Package Control',dispZh:'HWPM封装控制',help:'HWPM package-level control for coordinated frequency transitions.',menu:'./Advanced/PowerMgmt/CPU_Power/PState_HWPM',val:[E('Enabled'),E('Disabled')] },
+        { name:'HWPM_PerCorePState',type:'Enumeration',def:"Enabled",disp:'HWPM Per-Core P-State',dispZh:'每核P状态',help:'HWPM per-core P-State for asymmetric frequency across cores.',menu:'./Advanced/PowerMgmt/CPU_Power/PState_HWPM',val:[E('Enabled'),E('Disabled')] },
+        { name:'IMON_Slope',type:'Integer',def:100,disp:'IMON Slope (%)',dispZh:'IMON斜率',help:'IMON current slope calibration for power reporting accuracy.',menu:'./Advanced/PowerMgmt/CPU_Power/IMON_Config',lb:0,ub:200,st:1 },
+        { name:'IMON_Offset',type:'Integer',def:0,disp:'IMON Offset (W)',dispZh:'IMON偏移',help:'IMON current offset in watts for fine-tuning power measurements.',menu:'./Advanced/PowerMgmt/CPU_Power/IMON_Config',lb:-100,ub:100,st:1 },
+        { name:'IMON_PeakCurrent',type:'Integer',def:0,disp:'IMON Peak Current (A)',dispZh:'IMON峰值电流',help:'IMON peak current limit in amperes for overcurrent protection.',menu:'./Advanced/PowerMgmt/CPU_Power/IMON_Config',lb:0,ub:500,st:1 },
+        { name:'FanPWM_Min',type:'Integer',def:20,disp:'Min Fan PWM (%)',dispZh:'最小风扇PWM',help:'Minimum fan PWM duty cycle. Higher=cooling; lower=quieter.',menu:'./Advanced/PowerMgmt/ThermalMgmt',lb:10,ub:100,st:5 },
+        { name:'FanProfile',type:'Enumeration',def:"Auto",disp:'Fan Profile',dispZh:'风扇策略',help:'Fan speed profile. Auto=temperature-based; LowNoise=quiet.',menu:'./Advanced/PowerMgmt/ThermalMgmt',val:[E('Auto'),E('Low Noise'),E('Full Speed'),E('Custom')] },
+        { name:'ThermalTrip',type:'Enumeration',def:"Enabled",disp:'Thermal Trip',dispZh:'热保护',help:'Thermal trip protection shuts down at critical CPU temperature.',menu:'./Advanced/PowerMgmt/ThermalMgmt',val:[E('Enabled'),E('Disabled')] },
+        { name:'Prochot_Assert',type:'Enumeration',def:"Enabled",disp:'PROCHOT Assert',dispZh:'PROCHOT信号',help:'PROCHOT signal for external thermal management integration.',menu:'./Advanced/PowerMgmt/ThermalMgmt',val:[E('Enabled'),E('Disabled')] },
+        { name:'CloseLoopThermalThrot',type:'Enumeration',def:"Enabled",disp:'Closed-Loop Thermal Throttling',dispZh:'闭环热节流',help:'Closed-loop throttling uses actual temperature for precise control.',menu:'./Advanced/PowerMgmt/ThermalMgmt',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCIeMaxSpeed',type:'Enumeration',def:"Auto",disp:'PCIe Max Speed',dispZh:'PCIe最大速率',help:'Maximum PCIe link speed. Auto uses fastest mutually supported generation.',menu:'./Advanced/PCIeConfig',val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4'),E('Gen5')] },
+        { name:'PCIeAER',type:'Enumeration',def:"Enabled",disp:'PCIe AER',dispZh:'PCIe AER',help:'PCIe Advanced Error Reporting for detailed error detection and logging.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCIeECS',type:'Enumeration',def:"Enabled",disp:'PCIe ECRC',dispZh:'PCIe ECRC',help:'PCIe ECRC for end-to-end data integrity checking on PCIe links.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCIeAtomicOps',type:'Enumeration',def:"Enabled",disp:'PCIe Atomic Ops',dispZh:'PCIe原子操作',help:'PCIe atomic operations for lock-free inter-device communication.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCIeACS',type:'Enumeration',def:"Enabled",disp:'PCIe ACS',dispZh:'PCIe ACS',help:'PCIe Access Control Services for improved device isolation.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCIe10BitTag',type:'Enumeration',def:"Auto",disp:'PCIe 10-Bit Tag',dispZh:'PCIe 10位标签',help:'PCIe 10-Bit Tag for increased outstanding transaction capacity.',menu:'./Advanced/PCIeConfig',val:[E('Auto'),E('Enabled'),E('Disabled')] },
+        { name:'PCIe_SR_IOV',type:'Enumeration',def:"Enabled",disp:'SR-IOV Global',dispZh:'SR-IOV全局',help:'SR-IOV for sharing PCIe devices across virtual machines.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCIeRelaxedOrder',type:'Enumeration',def:"Enabled",disp:'PCIe Relaxed Ordering',dispZh:'PCIe宽松序',help:'PCIe relaxed transaction ordering for improved throughput.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'Above4GDecoding',type:'Enumeration',def:"Enabled",disp:'Above 4G Decoding',dispZh:'大于4G解码',help:'Above 4G MMIO decoding for large BAR device address spaces.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'ReSizeBAR',type:'Enumeration',def:"Enabled",disp:'Re-Size BAR Support',dispZh:'Resizable BAR',help:'Resizable BAR to expose GPU VRAM as single contiguous region.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'ARI_Forwarding',type:'Enumeration',def:"Enabled",disp:'ARI Forwarding',dispZh:'ARI转发',help:'Alternative Routing-ID for multi-function PCIe device support.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'MCTP_PCIe',type:'Enumeration',def:"Enabled",disp:'MCTP over PCIe',dispZh:'PCIe MCTP',help:'MCTP over PCIe for out-of-band device management.',menu:'./Advanced/PCIeConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'Slot1_OpROM',type:'Enumeration',def:"Enabled",disp:'Slot 1 Option ROM',dispZh:'槽1 OpROM',help:'Slot 1 Option ROM execution for legacy device initialization.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Enabled'),E('Disabled')] },
+        { name:'Slot2_OpROM',type:'Enumeration',def:"Enabled",disp:'Slot 2 Option ROM',dispZh:'槽2 OpROM',help:'Slot 2 Option ROM execution for legacy device initialization.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Enabled'),E('Disabled')] },
+        { name:'Slot3_OpROM',type:'Enumeration',def:"Enabled",disp:'Slot 3 Option ROM',dispZh:'槽3 OpROM',help:'Slot 3 Option ROM execution for legacy device initialization.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Enabled'),E('Disabled')] },
+        { name:'Slot4_OpROM',type:'Enumeration',def:"Enabled",disp:'Slot 4 Option ROM',dispZh:'槽4 OpROM',help:'Slot 4 Option ROM execution for legacy device initialization.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Enabled'),E('Disabled')] },
+        { name:'Slot1_MaxSpeed',type:'Enumeration',def:"Auto",disp:'Slot 1 Max Speed',dispZh:'槽1最大速率',help:'Per-slot PCIe maximum link speed for Slot 1.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4'),E('Gen5')] },
+        { name:'Slot2_MaxSpeed',type:'Enumeration',def:"Auto",disp:'Slot 2 Max Speed',dispZh:'槽2最大速率',help:'Per-slot PCIe maximum link speed for Slot 2.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4'),E('Gen5')] },
+        { name:'Slot3_MaxSpeed',type:'Enumeration',def:"Auto",disp:'Slot 3 Max Speed',dispZh:'槽3最大速率',help:'Per-slot PCIe maximum link speed for Slot 3.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4'),E('Gen5')] },
+        { name:'Slot4_MaxSpeed',type:'Enumeration',def:"Auto",disp:'Slot 4 Max Speed',dispZh:'槽4最大速率',help:'Per-slot PCIe maximum link speed for Slot 4.',menu:'./Advanced/PCIeConfig/PerSlot',val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4'),E('Gen5')] },
+        { name:'USBPorts_All',type:'Enumeration',def:"Enabled",disp:'All USB Ports',dispZh:'全部USB',help:'Global control for all USB ports.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'USBFrontPorts',type:'Enumeration',def:"Enabled",disp:'Front USB Ports',dispZh:'前置USB',help:'Front panel USB ports enable/disable.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'USBRearPorts',type:'Enumeration',def:"Enabled",disp:'Rear USB Ports',dispZh:'后置USB',help:'Rear panel USB ports enable/disable.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'USBInternalPorts',type:'Enumeration',def:"Enabled",disp:'Internal USB Ports',dispZh:'内置USB',help:'Internal USB ports for embedded devices.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'USB30Support',type:'Enumeration',def:"Enabled",disp:'USB 3.0 Support',dispZh:'USB 3.0支持',help:'USB 3.0 SuperSpeed support for USB ports.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'USB30_Legacy',type:'Enumeration',def:"Enabled",disp:'USB 3.0 Legacy',dispZh:'USB 3.0 Legacy',help:'USB 3.0 legacy mode for non-UEFI compatibility.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'XHCI_HandOff',type:'Enumeration',def:"Enabled",disp:'XHCI Hand-off',dispZh:'XHCI移交',help:'XHCI hand-off to OS for native xHCI controller support.',menu:'./Advanced/USBConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'USB_KB_Mouse_Timer',type:'Integer',def:0,disp:'USB KB/Mouse Timer (s)',dispZh:'USB键鼠超时',help:'USB keyboard/mouse initialization timeout in seconds.',menu:'./Advanced/USBConfig',lb:0,ub:30,st:1 },
+        { name:'USB_MassStorage_Reset',type:'Integer',def:20,disp:'USB Mass Storage Reset (s)',dispZh:'USB存储超时',help:'USB mass storage device reset timeout in seconds.',menu:'./Advanced/USBConfig/USB_MassStorage',lb:5,ub:60,st:5 },
+        { name:'USB_CDROM_Boot',type:'Enumeration',def:"Enabled",disp:'USB CD-ROM Boot',dispZh:'USB光驱',help:'USB CD-ROM/DVD drive boot support.',menu:'./Advanced/USBConfig/USB_MassStorage',val:[E('Enabled'),E('Disabled')] },
+        { name:'USB_Floppy_Boot',type:'Enumeration',def:"Enabled",disp:'USB Floppy Boot',dispZh:'USB软驱',help:'USB floppy drive boot support.',menu:'./Advanced/USBConfig/USB_MassStorage',val:[E('Enabled'),E('Disabled')] },
+        { name:'USB_HDD_MaxDevices',type:'Integer',def:8,disp:'USB HDD Max Devices',dispZh:'USB硬盘数',help:'Maximum number of USB HDD devices recognized.',menu:'./Advanced/USBConfig/USB_MassStorage',lb:0,ub:16,st:1 },
+        { name:'USB_EHCI_Controller',type:'Enumeration',def:"Enabled",disp:'USB EHCI Controller',dispZh:'EHCI控制器',help:'USB EHCI controller enable for USB 2.0 compatibility.',menu:'./Advanced/USBConfig/USB_MassStorage',val:[E('Enabled'),E('Disabled')] },
+        { name:'SerialConsole',type:'Enumeration',def:"Enabled",disp:'Serial Console',dispZh:'串口控制台',help:'Enable serial console for headless server operation.',menu:'./Advanced/SerialConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'BaudRate',type:'Enumeration',def:"115200",disp:'Serial Baud Rate',dispZh:'波特率',help:'Serial port communication speed in bits per second.',menu:'./Advanced/SerialConfig',val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')] },
+        { name:'DataBits',type:'Enumeration',def:"8",disp:'Serial Data Bits',dispZh:'数据位',help:'Number of data bits per serial communication frame.',menu:'./Advanced/SerialConfig',val:[E('7'),E('8')] },
+        { name:'Parity',type:'Enumeration',def:"None",disp:'Serial Parity',dispZh:'校验位',help:'Serial parity check mode for error detection.',menu:'./Advanced/SerialConfig',val:[E('None'),E('Even'),E('Odd')] },
+        { name:'StopBits',type:'Enumeration',def:"1",disp:'Serial Stop Bits',dispZh:'停止位',help:'Number of stop bits per serial communication frame.',menu:'./Advanced/SerialConfig',val:[E('1'),E('2')] },
+        { name:'FlowControl',type:'Enumeration',def:"None",disp:'Flow Control',dispZh:'流控制',help:'Serial flow control for data transmission pacing.',menu:'./Advanced/SerialConfig',val:[E('None'),E('RTS/CTS'),E('Xon/Xoff')] },
+        { name:'TerminalType',type:'Enumeration',def:"VT100+",disp:'Terminal Type',dispZh:'终端类型',help:'Terminal emulation type for serial console output.',menu:'./Advanced/SerialConfig',val:[E('VT100+'),E('VT-UTF8'),E('ANSI')] },
+        { name:'ConsoleRedirection',type:'Enumeration',def:"Serial",disp:'Console Redirection',dispZh:'控制台重定向',help:'Console output target. Serial=COM port; VGA=display.',menu:'./Advanced/SerialConfig',val:[E('Serial'),E('VGA'),E('Auto')] },
+        { name:'SOL_BaudRate',type:'Enumeration',def:"115200",disp:'SOL Baud Rate',dispZh:'SOL波特率',help:'Serial-over-LAN baud rate for remote console access via BMC.',menu:'./Advanced/SerialConfig',val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')] },
+        { name:'PrimaryDisplay',type:'Enumeration',def:"Auto",disp:'Primary Display',dispZh:'主显示设备',help:'Primary display output device priority.',menu:'./Advanced/GraphicsConfig',val:[E('Auto'),E('Onboard'),E('PCIe')] },
+        { name:'OnboardVGA',type:'Enumeration',def:"Enabled",disp:'Onboard VGA',dispZh:'板载VGA',help:'Onboard VGA controller enable/disable for discrete GPU use.',menu:'./Advanced/GraphicsConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'VGA_PaletteSnoop',type:'Enumeration',def:"Disabled",disp:'VGA Palette Snoop',dispZh:'调色板侦听',help:'VGA palette snoop for legacy video card compatibility.',menu:'./Advanced/GraphicsConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'GOP_Driver_Ver',type:'String',def:"v20.0",disp:'GOP Driver Version',dispZh:'GOP驱动版本',help:'Graphics Output Protocol driver version.',menu:'./Advanced/GraphicsConfig',ro:true },
+        { name:'VGA_ROM_Exec',type:'Enumeration',def:"UEFI",disp:'VGA ROM Execution',dispZh:'VGA ROM执行',help:'VGA ROM execution mode. UEFI=GOP; Legacy=VBIOS.',menu:'./Advanced/GraphicsConfig',val:[E('UEFI'),E('Legacy')] },
+        { name:'Gfx_LowPower',type:'Enumeration',def:"Enabled",disp:'Graphics Low Power',dispZh:'显卡低功耗',help:'Graphics controller low-power mode to reduce consumption.',menu:'./Advanced/GraphicsConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'SMI_Lock',type:'Enumeration',def:"Enabled",disp:'SMI Lock',dispZh:'SMI锁定',help:'SMI lock to prevent unauthorized SMM modifications.',menu:'./Advanced/SMIConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'SMI_Timeout',type:'Integer',def:0,disp:'SMI Timeout (ms)',dispZh:'SMI超时',help:'SMI handler timeout in milliseconds for watchdog protection.',menu:'./Advanced/SMIConfig',lb:0,ub:65535,st:100 },
+        { name:'SMM_SaveState',type:'Enumeration',def:"Enabled",disp:'SMM Save State',dispZh:'SMM保存状态',help:'SMM save state area for context preservation during SMM entry.',menu:'./Advanced/SMIConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'SoftwareSMI',type:'Enumeration',def:"Enabled",disp:'Software SMI',dispZh:'软件SMI',help:'Software-generated SMI for OS-to-firmware communication.',menu:'./Advanced/SMIConfig',val:[E('Enabled'),E('Disabled')],sr:false,sc:'定制' },
+        { name:'MCE_Recovery',type:'Enumeration',def:"Enabled",disp:'MCE Recovery',dispZh:'MCE恢复',help:'Enable Machine Check Exception recovery for uncorrected errors.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'eMCA_Gen2',type:'Enumeration',def:"Enabled",disp:'eMCA Gen2',dispZh:'eMCA第二代',help:'Enhanced MCA Generation 2 for detailed hardware error reporting.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'WHEA_Support',type:'Enumeration',def:"Enabled",disp:'WHEA Support',dispZh:'WHEA支持',help:'Windows Hardware Error Architecture for structured error reporting.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'BiosGuard',type:'Enumeration',def:"Enabled",disp:'BIOS Guard',dispZh:'BIOS防护',help:'BIOS Guard protects the flash region from unauthorized modification.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'BiosRecovery',type:'Enumeration',def:"Enabled",disp:'BIOS Recovery',dispZh:'BIOS恢复',help:'Automatic recovery from corrupted BIOS using redundant flash.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'CrashDump',type:'Enumeration',def:"Enabled",disp:'Crash Dump Support',dispZh:'崩溃转储',help:'Enable crash dump support for post-mortem debugging of failures.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'CorrectableErrLimit',type:'Integer',def:10,disp:'Correctable Err Limit',dispZh:'可纠正错误阈值',help:'Correctable error limit before escalation to uncorrectable.',menu:'./Advanced/RASConfig',lb:1,ub:500,st:5 },
+        { name:'UncorrectableErrHalt',type:'Enumeration',def:"Disabled",disp:'Halt on Uncorrectable',dispZh:'不可纠正停机',help:'Halt system on uncorrectable error to prevent data corruption.',menu:'./Advanced/RASConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'MCE_Threshold',type:'Integer',def:5,disp:'MCE Threshold',dispZh:'MCE阈值',help:'Machine Check Exception threshold count before OS notification.',menu:'./Advanced/RASConfig/MemRAS',lb:1,ub:100,st:1 },
+        { name:'CMCI_Support',type:'Enumeration',def:"Enabled",disp:'CMCI Support',dispZh:'CMCI支持',help:'Corrected Machine Check Interrupt for asynchronous error notification.',menu:'./Advanced/RASConfig/MemRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'CMCI_Threshold',type:'Integer',def:10,disp:'CMCI Threshold',dispZh:'CMCI阈值',help:'Corrected error count before generating a CMCI interrupt.',menu:'./Advanced/RASConfig/MemRAS',lb:1,ub:100,st:1 },
+        { name:'DoubleBitErrHalt',type:'Enumeration',def:"Enabled",disp:'Double-Bit Error Halt',dispZh:'双位错误停机',help:'Immediate halt on uncorrectable double-bit memory errors.',menu:'./Advanced/RASConfig/MemRAS',val:[E('Enabled'),E('Disabled')] },
+        { name:'SMBIOS_EventLog',type:'Enumeration',def:"Enabled",disp:'SMBIOS Event Log',dispZh:'SMBIOS事件',help:'SMBIOS event log for platform event recording.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'PCI64BitResource',type:'Enumeration',def:"Enabled",disp:'64-bit PCI Resource',dispZh:'64位PCI资源',help:'64-bit PCI resource allocation for large BAR devices.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'AttemptVGAFirst',type:'Enumeration',def:"Onboard",disp:'VGA Priority',dispZh:'VGA优先',help:'VGA initialization priority between onboard and add-in cards.',menu:'./Advanced/MiscConfig',val:[E('Onboard'),E('Offboard'),E('Auto')] },
+        { name:'OSWatchdogTimer',type:'Enumeration',def:"Enabled",disp:'OS Watchdog Timer',dispZh:'OS看门狗',help:'OS watchdog timer for automatic reset on OS hang.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'OSWatchdogTimeout',type:'Integer',def:10,disp:'OS Watchdog Timeout (m)',dispZh:'OS看门狗超时',help:'OS watchdog timeout in minutes before automatic reset.',menu:'./Advanced/MiscConfig',lb:1,ub:60,st:1 },
+        { name:'MaxPayloadSize',type:'Enumeration',def:"Auto",disp:'PCIe Max Payload Size',dispZh:'最大有效载荷',help:'PCIe maximum TLP payload size for throughput optimization.',menu:'./Advanced/MiscConfig',val:[E('Auto'),E('128B'),E('256B'),E('512B')] },
+        { name:'MaxReadReqSize',type:'Enumeration',def:"Auto",disp:'PCIe Max Read Req Size',dispZh:'最大读取请求',help:'PCIe maximum memory read request size for optimization.',menu:'./Advanced/MiscConfig',val:[E('Auto'),E('128B'),E('256B'),E('512B'),E('1024B')] },
+        { name:'POST_ErrorPause',type:'Enumeration',def:"Enabled",disp:'POST Error Pause',dispZh:'POST错误暂停',help:'Pause POST on non-critical errors for manual acknowledgment.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'UEFI_Shell',type:'Enumeration',def:"Enabled",disp:'UEFI Shell',dispZh:'UEFI Shell',help:'UEFI Shell for pre-boot diagnostics and scripting.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'MemMap_IO_Limit',type:'Enumeration',def:"Auto",disp:'Memory Mapped I/O Limit',dispZh:'MMIO上限',help:'Memory-mapped I/O address space limit for large configurations.',menu:'./Advanced/MiscConfig',val:[E('Auto'),E('2 GB'),E('4 GB'),E('8 GB'),E('16 GB'),E('64 GB')] },
+        { name:'ACPI_HPET',type:'Enumeration',def:"Enabled",disp:'ACPI HPET Table',dispZh:'HPET表',help:'ACPI High Precision Event Timer table for accurate timing.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'ACPI_SRAT_L3_as_NUMA',type:'Enumeration',def:"Enabled",disp:'SRAT L3 as NUMA',dispZh:'L3 NUMA',help:'Expose L3 cache as NUMA domain in SRAT for cache-aware scheduling.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'Above4G_Boot',type:'Enumeration',def:"Enabled",disp:'Above 4G MMIO BIOS Assign',dispZh:'4G以上MMIO',help:'Above 4G MMIO BIOS assignment for large PCIe address spaces.',menu:'./Advanced/MiscConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'TXT_ACM_Rev',type:'String',def:"v3.0",disp:'TXT ACM Revision',dispZh:'TXT ACM版本',help:'TXT Authenticated Code Module revision.',menu:'./Advanced/MiscConfig/TrustedExecution',ro:true },
+        { name:'SEAM_Support',type:'Enumeration',def:"Enabled",disp:'SEAM Support',dispZh:'SEAM支持',help:'SEAM support for SGX multi-package attestation.',menu:'./Advanced/MiscConfig/TrustedExecution',val:[E('Enabled'),E('Disabled')] },
+        { name:'PECI_Override',type:'Enumeration',def:"Disabled",disp:'PECI Override',dispZh:'PECI覆盖',help:'PECI override for debug and thermal interface control.',menu:'./Advanced/MiscConfig/TrustedExecution',val:[E('Enabled'),E('Disabled')] },
+        { name:'BootMode',type:'Enumeration',def:"UEFI",disp:'Boot Mode',dispZh:'启动模式',help:'System boot mode. UEFI with GPT; Legacy with MBR.',menu:'./BootOptions',val:[E('UEFI'),E('Legacy')],rb:true },
+        { name:'SecureBoot',type:'Enumeration',def:"Enabled",disp:'Secure Boot',dispZh:'安全启动',help:'Secure Boot verifies boot loader and OS digital signatures.',menu:'./BootOptions',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'FastBoot',type:'Enumeration',def:"Enabled",disp:'Fast Boot',dispZh:'快速启动',help:'Minimize POST time by skipping certain hardware init tests.',menu:'./BootOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'QuietBoot',type:'Enumeration',def:"Enabled",disp:'Quiet Boot',dispZh:'静默启动',help:'Show OEM logo instead of POST diagnostic messages during boot.',menu:'./BootOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'BootRetry',type:'Enumeration',def:"Enabled",disp:'Boot Retry',dispZh:'启动重试',help:'Retry boot from next device in boot order on boot failure.',menu:'./BootOptions',val:[E('Enabled'),E('Disabled')] },
+        { name:'NumLockState',type:'Enumeration',def:"On",disp:'NumLock State',dispZh:'NumLock',help:'Keyboard NumLock state at system boot completion.',menu:'./BootOptions',val:[E('On'),E('Off')] },
+        { name:'POSTReport',type:'Enumeration',def:"4s",disp:'POST Report Timeout (s)',dispZh:'POST报告超时',help:'POST report display timeout. NoLimit waits for user keypress.',menu:'./BootOptions',val:[E('0'),E('4'),E('8'),E('12'),E('NoLimit')] },
+        { name:'AddOnROM_Display',type:'Enumeration',def:"KeepCurrent",disp:'Add-On ROM Display',dispZh:'附加ROM显示',help:'Add-on card Option ROM display mode during POST diagnostics.',menu:'./BootOptions',val:[E('Keep Current'),E('Force BIOS')] },
+        { name:'BootOption1',type:'Enumeration',def:"NVMe SSD 0",disp:'Boot Option #1',dispZh:'启动选项1',help:'Primary boot device selection in boot order.',menu:'./BootOptions/BootDeviceOrder',val:[E('NVMe SSD 0'),E('NVMe SSD 1'),E('SATA HDD'),E('USB Drive'),E('PXE Network'),E('Disabled')] },
+        { name:'BootOption2',type:'Enumeration',def:"NVMe SSD 1",disp:'Boot Option #2',dispZh:'启动选项2',help:'Secondary boot device selection in boot order.',menu:'./BootOptions/BootDeviceOrder',val:[E('NVMe SSD 0'),E('NVMe SSD 1'),E('SATA HDD'),E('USB Drive'),E('PXE Network'),E('Disabled')] },
+        { name:'BootOption3',type:'Enumeration',def:"USB Drive",disp:'Boot Option #3',dispZh:'启动选项3',help:'Third boot device selection in boot order.',menu:'./BootOptions/BootDeviceOrder',val:[E('NVMe SSD 0'),E('NVMe SSD 1'),E('SATA HDD'),E('USB Drive'),E('PXE Network'),E('Disabled')] },
+        { name:'BootOption4',type:'Enumeration',def:"PXE Network",disp:'Boot Option #4',dispZh:'启动选项4',help:'Fourth boot device selection in boot order.',menu:'./BootOptions/BootDeviceOrder',val:[E('NVMe SSD 0'),E('NVMe SSD 1'),E('SATA HDD'),E('USB Drive'),E('PXE Network'),E('Disabled')] },
+        { name:'BootOption5',type:'Enumeration',def:"Disabled",disp:'Boot Option #5',dispZh:'启动选项5',help:'Fifth boot device selection in boot order.',menu:'./BootOptions/BootDeviceOrder',val:[E('NVMe SSD 0'),E('NVMe SSD 1'),E('SATA HDD'),E('USB Drive'),E('PXE Network'),E('Disabled')] },
+        { name:'BootOrderPolicy',type:'Enumeration',def:"Retry Indefinitely",disp:'Boot Order Policy',dispZh:'启动顺序策略',help:'Retry policy on boot failure. RetryIndef keeps trying each device.',menu:'./BootOptions/BootPolicy',val:[E('Retry Indefinitely'),E('Try Once Then Next'),E('Reset')] },
+        { name:'UEFI_OptimizedBoot',type:'Enumeration',def:"Enabled",disp:'UEFI Optimized Boot',dispZh:'UEFI优化启动',help:'UEFI optimized boot skips unnecessary legacy device init.',menu:'./BootOptions/BootPolicy',val:[E('Enabled'),E('Disabled')] },
+        { name:'UEFI_BootMenu',type:'Enumeration',def:"Enabled",disp:'F12 Boot Menu',dispZh:'F12启动菜单',help:'F12 one-time boot menu for ad-hoc device selection.',menu:'./BootOptions/BootPolicy',val:[E('Enabled'),E('Disabled')] },
+        { name:'InvalidBootRetry',type:'Enumeration',def:"3",disp:'Invalid Boot Retry',dispZh:'失败重试次数',help:'Maximum retry attempts when selected boot device is invalid.',menu:'./BootOptions/BootPolicy',val:[E('0'),E('1'),E('2'),E('3'),E('5'),E('Unlimited')] },
+        { name:'Timeout_BootMenu',type:'Integer',def:5,disp:'Boot Menu Timeout (s)',dispZh:'启动菜单超时',help:'Boot menu display timeout before automatic boot proceeds.',menu:'./BootOptions/BootPolicy',lb:0,ub:60,st:1 },
+        { name:'BBS_HDD_Priority',type:'Enumeration',def:"Normal",disp:'HDD BBS Priority',dispZh:'HDD优先级',help:'HDD BBS priority for legacy BIOS boot specification ordering.',menu:'./BootOptions/BBS_Priority',val:[E('Normal'),E('High'),E('Low')] },
+        { name:'BBS_NIC_Priority',type:'Enumeration',def:"Normal",disp:'NIC BBS Priority',dispZh:'网卡优先级',help:'NIC BBS priority for legacy BIOS boot specification ordering.',menu:'./BootOptions/BBS_Priority',val:[E('Normal'),E('High'),E('Low')] },
+        { name:'BBS_USB_Priority',type:'Enumeration',def:"Normal",disp:'USB BBS Priority',dispZh:'USB优先级',help:'USB BBS priority for legacy BIOS boot specification ordering.',menu:'./BootOptions/BBS_Priority',val:[E('Normal'),E('High'),E('Low')] },
+        { name:'BBS_Wait_Time',type:'Integer',def:0,disp:'BBS Wait Time (s)',dispZh:'BBS等待时间',help:'BBS device initialization wait time before enumeration.',menu:'./BootOptions/BBS_Priority',lb:0,ub:30,st:1 },
+        { name:'BBS_RetryCount',type:'Integer',def:3,disp:'BBS Retry Count',dispZh:'BBS重试次数',help:'BBS boot retry count before falling through to next device.',menu:'./BootOptions/BBS_Priority',lb:0,ub:10,st:1 },
+        { name:'AdminPassword',type:'Password',def:"",disp:'Administrator Password',dispZh:'管理员密码',help:'BIOS administrator password for full setup access. Redfish unavailable for security.',menu:'./Security',sr:false },
+        { name:'UserPassword',type:'Password',def:"",disp:'User Password',dispZh:'用户密码',help:'BIOS user password for limited boot-time access. Redfish unavailable for security.',menu:'./Security',sr:false },
+        { name:'PasswordMinLength',type:'Integer',def:8,disp:'Min Password Length',dispZh:'密码最小长度',help:'Minimum length requirement for BIOS passwords. Not manageable via Redfish.',menu:'./Security',sr:false,lb:4,ub:32,st:1 },
+        { name:'PasswordOnBoot',type:'Enumeration',def:"Disabled",disp:'Password on Boot',dispZh:'开机密码',help:'Require password entry on every system boot. Not manageable via Redfish.',menu:'./Security',val:[E('Enabled'),E('Disabled')],sr:false },
+        { name:'TPMSupport',type:'Enumeration',def:"Enabled",disp:'TPM Support',dispZh:'TPM支持',help:'Trusted Platform Module for secure key storage and attestation.',menu:'./Security/TPM_Config',val:[E('Enabled'),E('Disabled')],rb:true },
+        { name:'TPMVersion',type:'Enumeration',def:"TPM 2.0",disp:'TPM Version',dispZh:'TPM版本',help:'TPM standard version. TPM 2.0 required for Windows 11.',menu:'./Security/TPM_Config',val:[E('TPM 2.0'),E('TPM 1.2')],rb:true },
+        { name:'TPM_ActivePCRs',type:'Enumeration',def:"SHA256",disp:'TPM Active PCRs',dispZh:'活动PCRs',help:'Active PCR bank selection for TPM measurement algorithms.',menu:'./Security/TPM_Config',val:[E('SHA1'),E('SHA256')] },
+        { name:'TPM_PPI_Disable',type:'Enumeration',def:"Disabled",disp:'TPM PPI Disable',dispZh:'禁用PPI',help:'Physical Presence Interface disable to bypass confirmation.',menu:'./Security/TPM_Config',val:[E('Enabled'),E('Disabled')] },
+        { name:'TPM_Clear',type:'Enumeration',def:"No",disp:'Clear TPM',dispZh:'清除TPM',help:'Clear TPM ownership and keys. Warning: encrypted data lost. Redfish unavailable for security.',menu:'./Security/TPM_Config',val:[E('No'),E('Yes')],ro:true,sr:false },
+        { name:'SecureBootState',type:'Enumeration',def:"Enabled",disp:'Secure Boot State',dispZh:'安全启动状态',help:'Secure Boot enforces signature verification of boot loaders.',menu:'./Security/SecureBootConfig',val:[E('Enabled'),E('Disabled')] },
+        { name:'SecureBootMode',type:'Enumeration',def:"Standard",disp:'Secure Boot Mode',dispZh:'安全启动模式',help:'Standard uses built-in keys; Custom allows user key enrollment.',menu:'./Security/SecureBootConfig',val:[E('Standard'),E('Custom')] },
+        { name:'KeyManagement',type:'Enumeration',def:"Default",disp:'Key Management',dispZh:'密钥管理',help:'Secure Boot key management for PK, KEK, db, and dbx.',menu:'./Security/SecureBootConfig',val:[E('Default'),E('Custom'),E('Factory Restore')] },
+        { name:'RestoreDBDefaults',type:'Enumeration',def:"No",disp:'Restore DB Defaults',dispZh:'恢复DB默认值',help:'Restore Secure Boot signature databases to factory defaults. Redfish unavailable for security.',menu:'./Security/SecureBootConfig',val:[E('No'),E('Yes')],sr:false },
+        { name:'SGX_Support',type:'Enumeration',def:"Enabled",disp:'Intel SGX',dispZh:'SGX支持',help:'Intel Software Guard Extensions for hardware-isolated enclaves.',menu:'./Security/IntelSGX',val:[E('Enabled'),E('Disabled')],rb:true,sc:'定制' },
+        { name:'SGX_EPC_Size',type:'Enumeration',def:"Auto",disp:'SGX EPC Size',dispZh:'EPC大小',help:'Enclave Page Cache size for SGX secure memory allocation.',menu:'./Security/IntelSGX',val:[E('Auto'),E('64 MB'),E('128 MB'),E('256 MB'),E('512 MB')],sc:'定制' },
+        { name:'SGX_OwnerEpoch',type:'Enumeration',def:"Enabled",disp:'SGX Owner Epoch',dispZh:'Owner Epoch',help:'SGX Owner Epoch for enclave version control.',menu:'./Security/IntelSGX',val:[E('Enabled'),E('Disabled')],sc:'定制' },
+        { name:'SGX_LaunchControl',type:'Enumeration',def:"Unlocked",disp:'SGX Launch Control',dispZh:'启动控制',help:'SGX Launch Control for enclave signing policy.',menu:'./Security/IntelSGX',val:[E('Unlocked'),E('Locked')],sc:'定制' },
+        { name:'TXT_Support',type:'Enumeration',def:"Disabled",disp:'Intel TXT',dispZh:'TXT支持',help:'Intel Trusted Execution Technology for measured launch.',menu:'./Security/IntelTXT',val:[E('Enabled'),E('Disabled')],rb:true,sc:'定制' },
+        { name:'TXT_SMX_Enable',type:'Enumeration',def:"Enabled",disp:'TXT SMX',dispZh:'TXT SMX',help:'SMX requirement enforcement for Intel TXT measured launch.',menu:'./Security/IntelTXT',val:[E('Enabled'),E('Disabled')] },
+        { name:'VTd_On_TXT',type:'Enumeration',def:"Enabled",disp:'VT-d under TXT',dispZh:'TXT下VT-d',help:'VT-d enablement under TXT measured environment for I/O protection.',menu:'./Security/IntelTXT',val:[E('Enabled'),E('Disabled')] },
+        { name:'TME_Enable',type:'Enumeration',def:"Enabled",disp:'Total Memory Encryption',dispZh:'TME加密',help:'Total Memory Encryption for full physical memory encryption.',menu:'./Security/IntelTME',val:[E('Enabled'),E('Disabled')],rb:true,sc:'定制' },
+        { name:'MKTME_Enable',type:'Enumeration',def:"Disabled",disp:'Multi-Key TME',dispZh:'多密钥TME',help:'Multi-Key TME for per-VM memory encryption isolation.',menu:'./Security/IntelTME',val:[E('Enabled'),E('Disabled')],sc:'定制' },
+        { name:'TME_Bypass',type:'Enumeration',def:"Disabled",disp:'TME Bypass',dispZh:'TME绕过',help:'TME bypass mode for DMA device access to encrypted memory.',menu:'./Security/IntelTME',val:[E('Enabled'),E('Disabled')] },
+        { name:'NVMe_SecureErase',type:'Enumeration',def:"No",disp:'NVMe Secure Erase',dispZh:'NVMe安全擦除',help:'NVMe secure erase to cryptographically sanitize the drive. Redfish unavailable for security.',menu:'./Security/SecureErase',val:[E('No'),E('Yes')],ro:true,sr:false },
+        { name:'SATA_SecureErase',type:'Enumeration',def:"No",disp:'SATA Secure Erase',dispZh:'SATA安全擦除',help:'SATA secure erase using ATA Security Erase Unit command. Redfish unavailable for security.',menu:'./Security/SecureErase',val:[E('No'),E('Yes')],ro:true,sr:false },
+        { name:'HDD_Pwd_FreezeLock',type:'Enumeration',def:"Enabled",disp:'HDD Password Freeze Lock',dispZh:'硬盘密码冻结锁',help:'Freeze lock HDD password to prevent runtime modification. Not manageable via Redfish.',menu:'./Security/SecureErase',val:[E('Enabled'),E('Disabled')],sr:false },
+        { name:'BIOS_Rollback_Prevent',type:'Enumeration',def:"Enabled",disp:'BIOS Rollback Prevention',dispZh:'BIOS回滚防护',help:'Prevent downgrade to older BIOS firmware versions. Not manageable via Redfish.',menu:'./Security/SecureErase',val:[E('Enabled'),E('Disabled')],sr:false },
+        { name:'BIOSUpdateLock',type:'Enumeration',def:"Disabled",disp:'BIOS Update Lock',dispZh:'BIOS更新锁',help:'Prevent unauthorized BIOS firmware updates. Not manageable via Redfish.',menu:'./ServerManagement',val:[E('Enabled'),E('Disabled')],sr:false },
+        { name:'WatchdogTimer',type:'Enumeration',def:"Enabled",disp:'Watchdog Timer',dispZh:'看门狗',help:'Watchdog timer for automatic system recovery on hang.',menu:'./ServerManagement',val:[E('Enabled'),E('Disabled')] },
+        { name:'WatchdogTimeout',type:'Integer',def:5,disp:'Watchdog Timeout (min)',dispZh:'看门狗超时',help:'Watchdog timer timeout in minutes before automatic reset.',menu:'./ServerManagement',lb:1,ub:60,st:1 },
+        { name:'RestoreDefaults',type:'Enumeration',def:"None",disp:'Restore Defaults',dispZh:'恢复出厂设置',help:'Restore all BIOS settings to factory default values. Not manageable via Redfish.',menu:'./ServerManagement',val:[E('None'),E('Restore')],sr:false },
+        { name:'DumpFullMemory',type:'Enumeration',def:"Disabled",disp:'Full Memory Dump',dispZh:'全内存转储',help:'Enable full physical memory dump on crash for debugging.',menu:'./ServerManagement',val:[E('Enabled'),E('Disabled')] },
+        { name:'BMC_IPSource',type:'Enumeration',def:"DHCP",disp:'BMC IP Source',dispZh:'BMC IP来源',help:'BMC IP source. DHCP automatic; Static manual configuration.',menu:'./ServerManagement/BMC_Network',val:[E('DHCP'),E('Static')] },
+        { name:'BMC_IPAddress',type:'String',def:"0.0.0.0",disp:'BMC IP Address',dispZh:'BMC IP地址',help:'BMC static IP address for management access.',menu:'./ServerManagement/BMC_Network',mn:7,mx:15 },
+        { name:'BMC_SubnetMask',type:'String',def:"255.255.255.0",disp:'BMC Subnet Mask',dispZh:'BMC子网掩码',help:'BMC subnet mask for management network configuration.',menu:'./ServerManagement/BMC_Network',mn:7,mx:15 },
+        { name:'BMC_Gateway',type:'String',def:"0.0.0.0",disp:'BMC Gateway',dispZh:'BMC网关',help:'BMC default gateway IP for management network routing.',menu:'./ServerManagement/BMC_Network',mn:7,mx:15 },
+        { name:'BMC_VLAN_Enable',type:'Enumeration',def:"Disabled",disp:'BMC VLAN Support',dispZh:'BMC VLAN',help:'BMC VLAN tagging for management traffic isolation.',menu:'./ServerManagement/BMC_Network',val:[E('Enabled'),E('Disabled')] },
+        { name:'BMC_VLAN_ID',type:'Integer',def:0,disp:'BMC VLAN ID',dispZh:'BMC VLAN ID',help:'BMC VLAN ID 0-4095 for management network traffic.',menu:'./ServerManagement/BMC_Network',lb:0,ub:4095,st:1 },
+        { name:'BMC_DedicatedNIC',type:'Enumeration',def:"Enabled",disp:'BMC Dedicated NIC',dispZh:'专用网口',help:'BMC dedicated management NIC port enable.',menu:'./ServerManagement/BMC_Network',val:[E('Enabled'),E('Disabled')] },
+        { name:'BMC_SharedNIC',type:'Enumeration',def:"Enabled",disp:'BMC Shared NIC',dispZh:'共享网口',help:'BMC shared NIC for management over data network ports.',menu:'./ServerManagement/BMC_Network',val:[E('Enabled'),E('Disabled')] },
+        { name:'BMC_NCSI_Mode',type:'Enumeration',def:"Auto Negotiate",disp:'BMC NCSI Mode',dispZh:'NCSI模式',help:'BMC NCSI link negotiation for sideband management.',menu:'./ServerManagement/BMC_Network',val:[E('Auto Negotiate'),E('Force 100M'),E('Force 1000M')] },
+        { name:'SEL_LogFullPolicy',type:'Enumeration',def:"Overwrite",disp:'SEL Full Policy',dispZh:'SEL满策略',help:'SEL full behavior. Overwrite oldest entries or stop logging.',menu:'./ServerManagement/EventLog',val:[E('Overwrite'),E('Stop Logging')] },
+        { name:'SEL_LogBootEvents',type:'Enumeration',def:"Enabled",disp:'Log Boot Events',dispZh:'记录启动事件',help:'Log system boot events to the System Event Log.',menu:'./ServerManagement/EventLog',val:[E('Enabled'),E('Disabled')] },
+        { name:'SEL_LogECCEvents',type:'Enumeration',def:"Enabled",disp:'Log ECC Events',dispZh:'记录ECC事件',help:'Log ECC memory correction events to the System Event Log.',menu:'./ServerManagement/EventLog',val:[E('Enabled'),E('Disabled')] },
+        { name:'SEL_LogPCIeEvents',type:'Enumeration',def:"Enabled",disp:'Log PCIe Events',dispZh:'记录PCIe事件',help:'Log PCIe error events to the System Event Log.',menu:'./ServerManagement/EventLog',val:[E('Enabled'),E('Disabled')] },
+        { name:'SEL_LogThermalEvents',type:'Enumeration',def:"Enabled",disp:'Log Thermal Events',dispZh:'记录散热事件',help:'Log thermal threshold events to the System Event Log.',menu:'./ServerManagement/EventLog',val:[E('Enabled'),E('Disabled')] },
+        { name:'SEL_LogPowerEvents',type:'Enumeration',def:"Enabled",disp:'Log Power Events',dispZh:'记录电源事件',help:'Log power-related events to the System Event Log.',menu:'./ServerManagement/EventLog',val:[E('Enabled'),E('Disabled')] },
+        { name:'SysContact',type:'String',def:"",disp:'System Contact',dispZh:'联系人',help:'System administrator contact information for data center.',menu:'./ServerManagement/SystemInfo',mx:128 },
+        { name:'SysLocation',type:'String',def:"",disp:'System Location',dispZh:'系统位置',help:'Physical location of this server in the data center.',menu:'./ServerManagement/SystemInfo',mx:128 },
+        { name:'SysSerialNumber',type:'String',def:"SN000000",disp:'System Serial Number',dispZh:'序列号',help:'System serial number for warranty and support.',menu:'./ServerManagement/SystemInfo',ro:true,sr:false },
+        { name:'SysPartNumber',type:'String',def:"PN000000",disp:'System Part Number',dispZh:'部件号',help:'System part number for hardware component identification.',menu:'./ServerManagement/SystemInfo',ro:true,sr:false },
+        { name:'SysSKU',type:'String',def:"",disp:'System SKU',dispZh:'SKU编号',help:'System SKU number for configuration and inventory tracking.',menu:'./ServerManagement/SystemInfo',ro:true,sr:false },
+        { name:'PowerRestorePolicy',type:'Enumeration',def:"Last State",disp:'Power Restore Policy',dispZh:'电源恢复策略',help:'Behavior when AC power is restored after unexpected loss.',menu:'./ServerManagement/PowerRestore',val:[E('Always On'),E('Always Off'),E('Last State')] },
+        { name:'PowerRestoreDelay',type:'Integer',def:0,disp:'Power Restore Delay (s)',dispZh:'恢复延迟',help:'Delay before auto-power-on after AC power restoration.',menu:'./ServerManagement/PowerRestore',sc:'定制',lb:0,ub:300,st:5 },
+        { name:'PowerButtonBehavior',type:'Enumeration',def:"Instant Off",disp:'Power Button Behavior',dispZh:'电源按钮',help:'Power button press behavior for graceful or immediate shutdown.',menu:'./ServerManagement/PowerRestore',val:[E('Instant Off'),E('Delay 4 Seconds')] },
+        { name:'LDAP_Enable',type:'Enumeration',def:"Disabled",disp:'LDAP Authentication',dispZh:'LDAP认证',help:'LDAP authentication for centralized BMC user management.',menu:'./Security/LDAP_Config',val:[E('Enabled'),E('Disabled')] },
+        { name:'LDAP_ServerIP',type:'String',def:"",disp:'LDAP Server IP',dispZh:'服务器IP',help:'LDAP directory server IP address for authentication.',menu:'./Security/LDAP_Config',mn:7,mx:15 },
+        { name:'LDAP_Port',type:'Integer',def:389,disp:'LDAP Port',dispZh:'LDAP端口',help:'LDAP directory service port number.',menu:'./Security/LDAP_Config',lb:1,ub:65535,st:1 },
+        { name:'LDAP_DN',type:'String',def:"",disp:'LDAP Base DN',dispZh:'基准DN',help:'LDAP Base Distinguished Name for user search.',menu:'./Security/LDAP_Config',mx:256 },
+        { name:'LDAP_GroupFilter',type:'String',def:"",disp:'LDAP Group Filter',dispZh:'组过滤',help:'LDAP group filter for role-based access control.',menu:'./Security/LDAP_Config',mx:128 },
     ]
 };
 
-/* ================================================================
- * 机型 2: FusionServer 1288H V7 — 1U2P 高密度
- * ================================================================ */
-const MODEL_1288HV7 = {
-    productName: 'FusionServer 1288H V7',
-    systemId: 'FUSION_1288HV7',
-    firmwareVersion: 'iBMC V688 v3.42',
-    attrs: [
-        { name:'BiosVersion',        type:'String', def:'V688',       disp:'BIOS Version',         dispZh:'BIOS 版本',        menu:'./', ro:true },
-        { name:'BiosReleaseDate',    type:'String', def:'2026-01-20', disp:'BIOS Release Date',     dispZh:'BIOS 发布日期',    menu:'./', ro:true },
-        { name:'ProductName',        type:'String', def:'FusionServer 1288H V7', disp:'Product Name',dispZh:'产品名称',   menu:'./', ro:true },
-        { name:'CpuMicrocodeVersion',type:'String', def:'0x2B000160', disp:'CPU Microcode',          dispZh:'CPU 微码',         menu:'./', ro:true },
-
-        // Processor (1U density — limited TDP options)
-        { name:'IntelHyperThreading',     type:'Enumeration', def:'Enabled',  disp:'Hyper-Threading',      dispZh:'超线程',          val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ActiveCoresPerProcessor', type:'Integer',     def:0,          disp:'Active Cores',         dispZh:'启用核心数',      lb:0, ub:48, st:1, menu:'./Processor', rb:true },
-        { name:'IntelVT',                 type:'Enumeration', def:'Enabled',  disp:'Intel VT-x',           dispZh:'VT-x 虚拟化',     val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'IntelVTd',                type:'Enumeration', def:'Enabled',  disp:'Intel VT-d',           dispZh:'VT-d 定向I/O',    val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcTurboMode',           type:'Enumeration', def:'Enabled',  disp:'Turbo Boost',          dispZh:'Turbo 加速',      val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcCStates',             type:'Enumeration', def:'Enabled',  disp:'C-States',             dispZh:'C状态节能',        val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-        { name:'ProcConfigTDP',           type:'Enumeration', def:'Nominal',  disp:'Configurable TDP',     dispZh:'可配置TDP',       val:[E('Nominal'),E('Maximum')], menu:'./Processor', sc:'阿里', rb:true },
-        // 1U thermal constraints — lower upper bounds
-        { name:'ProcThermalThrottle',     type:'Enumeration', def:'Enabled',  disp:'Thermal Throttling',   dispZh:'温度节流',         help:'1U density thermal protection.', helpZh:'1U高密度散热保护。', val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-
-        // Memory (DDR5, limited capacity in 1U)
-        { name:'TotalMemSize',     type:'String',     def:'512 GB',  disp:'Total Memory',     dispZh:'总内存',     menu:'./Memory', ro:true },
-        { name:'MemSpeed',         type:'Enumeration', def:'Auto',     disp:'Memory Speed',     dispZh:'内存速率',   val:[E('Auto'),E('5600'),E('5200'),E('4800'),E('4400')], menu:'./Memory', rb:true },
-        { name:'MemVoltage',       type:'Enumeration', def:'1.1V',    disp:'Memory Voltage',   dispZh:'内存电压',   val:[E('1.1V'),E('1.2V')], menu:'./Memory' },
-        { name:'MemPatrolScrub',   type:'Enumeration', def:'Enabled', disp:'Patrol Scrub',      dispZh:'内存巡检',   val:[E('Enabled'),E('Disabled')], menu:'./Memory' },
-        { name:'MemNumaMode',      type:'Enumeration', def:'Enabled', disp:'NUMA Optimize',     dispZh:'NUMA 优化',  val:[E('Enabled'),E('Disabled')], menu:'./Memory', rb:true },
-        { name:'MemMirrorMode',    type:'Enumeration', def:'Disabled',disp:'Memory Mirror',     dispZh:'内存镜像',   val:[E('Disabled'),E('Enabled'),E('Spare')], menu:'./Memory', rb:true },
-        { name:'MemRASMode',       type:'Enumeration', def:'MaxPerf', disp:'Memory RAS',        dispZh:'内存RAS',    val:[EN('MaxPerf','Max Performance'),EN('MaxRel','Max Reliability')], menu:'./Memory', rb:true },
-        // DIMM sparing for 1U reliability
-        { name:'MemRankSparing',   type:'Enumeration', def:'Disabled',disp:'Rank Sparing',      dispZh:'Rank 备用',   help:'Reserve memory ranks as hot-spares.', helpZh:'预留内存rank作为热备用。', val:[E('Enabled'),E('Disabled')], menu:'./Memory', rb:true },
-
-        // Storage (fewer ports in 1U)
-        { name:'SataController',   type:'Enumeration', def:'Enabled', disp:'SATA Controller',    dispZh:'SATA 控制器', val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'SataMode',         type:'Enumeration', def:'AHCI',    disp:'SATA Mode',          dispZh:'SATA 模式',   val:[E('AHCI'),E('RAID')], menu:'./Storage', rb:true },
-        { name:'NvmeRaidMode',     type:'Enumeration', def:'Disabled',disp:'NVMe RAID',          dispZh:'NVMe RAID',    val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'SataHotplugCap',   type:'Enumeration', def:'Enabled', disp:'SATA Hot Plug',      dispZh:'SATA 热插拔', val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-
-        // Network
-        { name:'NicPXEStack',      type:'Enumeration', def:'Enabled',  disp:'UEFI PXE Stack',     dispZh:'PXE 协议栈',   val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicHTTPBoot',      type:'Enumeration', def:'Disabled', disp:'HTTP Boot',          dispZh:'HTTP 启动',     val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv4PXE',       type:'Enumeration', def:'Enabled',  disp:'IPv4 PXE',           dispZh:'IPv4 PXE',      val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv6PXE',       type:'Enumeration', def:'Disabled', disp:'IPv6 PXE',           dispZh:'IPv6 PXE',      val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicBootMode',      type:'Enumeration', def:'UEFI',     disp:'NIC Boot Mode',      dispZh:'网卡启动模式',  val:[E('UEFI'),E('Legacy PXE')], menu:'./Network', rb:true },
-
-        // Boot
-        { name:'BootMode',       type:'Enumeration', def:'Uefi',    disp:'Boot Mode',           dispZh:'启动模式',       val:[EN('Uefi','UEFI'),EN('LegacyBios','Legacy BIOS')], menu:'./Boot', rb:true },
-        { name:'FastBoot',       type:'Enumeration', def:'Enabled', disp:'Fast Boot',            dispZh:'快速启动',       val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'QuietBoot',      type:'Enumeration', def:'Enabled', disp:'Quiet Boot',           dispZh:'安静启动',       val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'BootTimeout',    type:'Integer',     def:3,        disp:'Boot Timeout (s)',     dispZh:'启动超时(秒)',   lb:1, ub:65535, st:1, menu:'./Boot' },
-        { name:'BootRetryCount', type:'Integer',     def:2,        disp:'Boot Retry Count',     dispZh:'启动重试次数',   lb:0, ub:10, st:1, menu:'./Boot' },
-
-        // Security
-        { name:'SecureBoot',         type:'Enumeration', def:'Disabled', disp:'Secure Boot',       dispZh:'安全启动',       val:[E('Enabled'),E('Disabled')], ro:true, menu:'./Security', rb:true },
-        { name:'SecureBootMode',     type:'Enumeration', def:'Standard', disp:'Secure Boot Mode',  dispZh:'安全启动模式',   val:[E('Standard'),E('Custom')], menu:'./Security', rb:true },
-        { name:'TpmState',           type:'Enumeration', def:'Enabled',  disp:'TPM State',         dispZh:'TPM 状态',       val:[E('Enabled'),E('Disabled')], menu:'./Security', rb:true },
-        { name:'TpmActivePcrBanks',  type:'Enumeration', def:'SHA256',   disp:'TPM PCR Banks',     dispZh:'TPM PCR',        val:[E('SHA1'),E('SHA256')], menu:'./Security', rb:true },
-        { name:'AdminPassword',      type:'Password',    def:null,       disp:'Admin Password',    dispZh:'管理员密码',     mn:8, mx:32, menu:'./Security' },
-        { name:'UserPassword',       type:'Password',    def:null,       disp:'User Password',     dispZh:'用户密码',       mn:8, mx:32, menu:'./Security' },
-
-        // Power (1U — lower fan limits, aggressive power management)
-        { name:'PowerPolicy',          type:'Enumeration', def:'Efficient', disp:'Power Policy',     dispZh:'电源策略',       val:[EN('Perf','Max Performance'),EN('Efficient','Efficient'),EN('Save','Power Saving')], menu:'./Power', rb:true },
-        { name:'AcPowerRestorePolicy', type:'Enumeration', def:'LastState',disp:'AC Restore',        dispZh:'交流电恢复',     val:[EN('Off','Always Off'),EN('On','Always On'),EN('LastState','Last State')], menu:'./Power' },
-        { name:'PowerOnByLAN',         type:'Enumeration', def:'Enabled',  disp:'Wake-on-LAN',     dispZh:'网络唤醒',        val:[E('Enabled'),E('Disabled')], menu:'./Power' },
-        { name:'FanControlMode',       type:'Enumeration', def:'Auto',     disp:'Fan Control',     dispZh:'风扇控制',        val:[E('Auto'),E('Manual')], menu:'./Power' },
-        { name:'FanSpeedLowLimit',     type:'Integer',     def:30,         disp:'Fan Min (%)',     dispZh:'风扇最低(%)',     help:'1U higher min fan speed for cooling.', lb:10, ub:100, st:5, menu:'./Power' },
-        { name:'PowerCapEnable',       type:'Enumeration', def:'Disabled', disp:'Power Capping',    dispZh:'功率封顶',        val:[E('Enabled'),E('Disabled')], sc:'阿里', menu:'./Power' },
-        { name:'PowerCapValue',        type:'Integer',     def:500,        disp:'Power Cap (W)',    dispZh:'功率封顶(瓦)',    lb:100, ub:1500, st:10, sc:'阿里', menu:'./Power' },
-        // 1U-specific: tighter power budget
-        { name:'DynPowerCapping',      type:'Enumeration', def:'Enabled',  disp:'Dynamic Power Cap', dispZh:'动态功率封顶',    help:'Auto-adjust power cap based on workload.', helpZh:'根据负载自动调整功耗上限。', val:[E('Enabled'),E('Disabled')], menu:'./Power' },
-
-        // Advanced
-        { name:'HardwarePrefetcher',   type:'Enumeration', def:'Enabled',  disp:'Hardware Prefetcher',dispZh:'硬件预取器',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AdjacentCachePrefetch',type:'Enumeration', def:'Enabled',  disp:'Adjacent Prefetch',  dispZh:'邻接预取',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'DCUStreamPrefetcher',  type:'Enumeration', def:'Enabled',  disp:'DCU Stream Pre',    dispZh:'DCU 流预取',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AESNI',                type:'Enumeration', def:'Enabled',  disp:'Intel AES-NI',       dispZh:'AES-NI',        val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'Above4GDecoding',  type:'Enumeration', def:'Enabled',  disp:'Above 4G Decoding',  dispZh:'4G以上解码',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'ResizableBAR',     type:'Enumeration', def:'Enabled',  disp:'Re-Size BAR',        dispZh:'可调整BAR',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'PcieMaxLinkSpeed', type:'Enumeration', def:'Auto',     disp:'PCIe Max Speed',     dispZh:'PCIe 最大速率', val:[E('Auto'),E('Gen3'),E('Gen4'),E('Gen5')], menu:'./Advanced', rb:true },
-        { name:'PcieAspmSupport',  type:'Enumeration', def:'Enabled',  disp:'PCIe ASPM',          dispZh:'PCIe ASPM',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'UsbPortsAll',      type:'Enumeration', def:'Enabled',  disp:'All USB Ports',      dispZh:'所有USB',       val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'UsbFrontPorts',    type:'Enumeration', def:'Enabled',  disp:'Front USB',          dispZh:'前置USB',       val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'UsbRearPorts',     type:'Enumeration', def:'Enabled',  disp:'Rear USB',           dispZh:'后置USB',       val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'SerialAEnabled',   type:'Enumeration', def:'Enabled',  disp:'Serial COM1',        dispZh:'串口 COM1',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialBaudRate',   type:'Enumeration', def:'115200',   disp:'Serial Baud Rate',   dispZh:'串口波特率',    val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')], menu:'./Advanced' },
-        { name:'ConsoleRedirect',  type:'Enumeration', def:'Enabled',  disp:'Console Redirection',dispZh:'控制台重定向',  val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'PerfProfile',      type:'Enumeration', def:'Efficient',disp:'Performance Profile',dispZh:'性能配置档',    val:[EN('MaxPerf','Max'),EN('Efficient','Efficient'),EN('Latency','Latency Opt')], menu:'./Advanced', rb:true },
-        { name:'SubNumaClustering',type:'Enumeration', def:'Disabled', disp:'SNC',                 dispZh:'子NUMA集群',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-
-        // Server Mgmt
-        { name:'BmcWatchdog',         type:'Enumeration', def:'Enabled',  disp:'BMC Watchdog',     dispZh:'BMC 看门狗',    val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcWatchdogTimeout',  type:'Integer',     def:300,       disp:'Watchdog Timeout',  dispZh:'超时(秒)',       lb:30, ub:1800, st:30, menu:'./ServerMgmt' },
-        { name:'OsWatchdogTimer',     type:'Enumeration', def:'Enabled',  disp:'OS Watchdog',       dispZh:'OS 看门狗',     val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'SolEnabled',          type:'Enumeration', def:'Enabled',  disp:'Serial Over LAN',   dispZh:'SOL 局域网串口',val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcLanMode',          type:'Enumeration', def:'Dedicated',disp:'BMC LAN Mode',      dispZh:'BMC 网口模式',  val:[E('Dedicated'),EN('SharedLOM','Shared LOM')], sc:'阿里', menu:'./ServerMgmt' },
-        { name:'BmcIPv4Address',      type:'String',      def:'192.168.1.101',disp:'BMC IPv4',      dispZh:'BMC IPv4',      ro:true, menu:'./ServerMgmt' },
-        { name:'BmcMacAddress',       type:'String',      def:'00:1B:2D:4E:5F:60',disp:'BMC MAC',   dispZh:'BMC MAC',       ro:true, menu:'./ServerMgmt' },
-
-        // Misc
-        { name:'NumLock',       type:'Enumeration', def:'On',      disp:'NumLock',             dispZh:'NumLock',       val:[E('On'),E('Off')], menu:'./Misc' },
-        { name:'CpuErrLog',     type:'Enumeration', def:'Enabled', disp:'CPU Error Log',        dispZh:'CPU 错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'MemErrLog',     type:'Enumeration', def:'Enabled', disp:'Memory Error Log',     dispZh:'内存错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'WheaSupport',   type:'Enumeration', def:'Enabled', disp:'WHEA Support',         dispZh:'WHEA',          val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-    ]
-};
-
-/* ================================================================
- * 机型 3: FusionServer 5288 V7 — 4U2P 大容量存储
- * ================================================================ */
-const MODEL_5288V7 = {
-    productName: 'FusionServer 5288 V7',
-    systemId: 'FUSION_5288V7',
-    firmwareVersion: 'iBMC V685 v3.40',
-    attrs: [
-        { name:'BiosVersion',        type:'String', def:'V685', disp:'BIOS Version',   dispZh:'BIOS 版本',     menu:'./', ro:true },
-        { name:'ProductName',        type:'String', def:'FusionServer 5288 V7', disp:'Product Name',dispZh:'产品名称', menu:'./', ro:true },
-        { name:'BiosReleaseDate',    type:'String', def:'2026-02-10', disp:'BIOS Date',dispZh:'发布日期', menu:'./', ro:true },
-
-        // Processor
-        { name:'IntelHyperThreading',      type:'Enumeration', def:'Enabled',  disp:'Hyper-Threading',    dispZh:'超线程',       val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ActiveCoresPerProcessor',  type:'Integer',     def:0,          disp:'Active Cores',       dispZh:'启用核心数',   lb:0, ub:56, st:1, menu:'./Processor', rb:true },
-        { name:'IntelVT',                  type:'Enumeration', def:'Enabled',  disp:'Intel VT-x',         dispZh:'VT-x',          val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'IntelVTd',                 type:'Enumeration', def:'Enabled',  disp:'Intel VT-d',         dispZh:'VT-d',          val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcTurboMode',            type:'Enumeration', def:'Enabled',  disp:'Turbo Boost',        dispZh:'Turbo',         val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcCStates',              type:'Enumeration', def:'Enabled',  disp:'C-States',           dispZh:'C状态',         val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-        { name:'ProcConfigTDP',            type:'Enumeration', def:'Maximum',  disp:'Configurable TDP',   dispZh:'可配置TDP',    help:'Storage workloads favor max TDP.', val:[E('Nominal'),E('Maximum')], menu:'./Processor', sc:'腾讯', rb:true },
-
-        // Memory
-        { name:'TotalMemSize',  type:'String', def:'512 GB',disp:'Total Memory',  dispZh:'总内存',  menu:'./Memory', ro:true },
-        { name:'MemSpeed',      type:'Enumeration', def:'Auto',disp:'Memory Speed',  dispZh:'内存速率', val:[E('Auto'),E('4800'),E('4400'),E('4000')], menu:'./Memory', rb:true },
-        { name:'MemVoltage',    type:'Enumeration', def:'1.1V',disp:'Memory Voltage',dispZh:'内存电压', val:[E('1.1V'),E('1.2V')], menu:'./Memory' },
-        { name:'MemPatrolScrub',type:'Enumeration', def:'Enabled',disp:'Patrol Scrub', dispZh:'内存巡检', val:[E('Enabled'),E('Disabled')], menu:'./Memory' },
-        { name:'MemNumaMode',   type:'Enumeration', def:'Enabled',disp:'NUMA',         dispZh:'NUMA',    val:[E('Enabled'),E('Disabled')], menu:'./Memory', rb:true },
-
-        // ---- Storage (big differentiator — 44 drive bays) ----
-        { name:'SataController',  type:'Enumeration', def:'Enabled',  disp:'SATA Controller',    dispZh:'SATA 控制器',    val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'SataMode',        type:'Enumeration', def:'RAID',     disp:'SATA Mode',          dispZh:'SATA 模式',      val:[E('AHCI'),E('RAID')], menu:'./Storage', rb:true },
-        { name:'SataHotplugCap',  type:'Enumeration', def:'Enabled',  disp:'SATA Hot Plug',      dispZh:'SATA 热插拔',    val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        // Port groups for 44 drives
-        { name:'SataPorts_0_7',   type:'Enumeration', def:'Enabled', disp:'SATA Ports 0-7',     dispZh:'SATA 端口0-7',   val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataPorts_8_15',  type:'Enumeration', def:'Enabled', disp:'SATA Ports 8-15',    dispZh:'SATA 端口8-15',  val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataPorts_16_23', type:'Enumeration', def:'Enabled', disp:'SATA Ports 16-23',   dispZh:'SATA 端口16-23', val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataPorts_24_31', type:'Enumeration', def:'Enabled', disp:'SATA Ports 24-31',   dispZh:'SATA 端口24-31', val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataPorts_32_43', type:'Enumeration', def:'Enabled', disp:'SATA Ports 32-43',   dispZh:'SATA 端口32-43', val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'NvmeRaidMode',    type:'Enumeration', def:'Disabled',disp:'NVMe RAID',          dispZh:'NVMe RAID',      val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'OnboardRaidCtrl', type:'Enumeration', def:'Enabled', disp:'Onboard RAID Ctrl',  dispZh:'板载RAID控制器',  help:'LSI 9660 for large arrays.', helpZh:'大阵列LSI 9660。', val:[E('Enabled'),E('Disabled')], menu:'./Storage', sc:'腾讯', rb:true },
-        { name:'StorageThermalCtrl', type:'Enumeration', def:'Enabled',disp:'Storage Thermal',   dispZh:'存储散热控制',   help:'Active cooling for high-density drives.', helpZh:'高密度硬盘主动散热。', val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        // Write cache / read ahead for HDD arrays
-        { name:'SataWriteCache',  type:'Enumeration', def:'Enabled', disp:'SATA Write Cache',   dispZh:'SATA 写缓存',     val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataReadAhead',   type:'Enumeration', def:'Enabled', disp:'SATA Read Ahead',    dispZh:'SATA 预读',       val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'JBOD_Mode',       type:'Enumeration', def:'Disabled',disp:'JBOD Mode',          dispZh:'JBOD 直通模式',   help:'Pass-through disks without RAID.', helpZh:'磁盘直通不组RAID。', val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-
-        // Network
-        { name:'NicPXEStack',   type:'Enumeration', def:'Enabled',disp:'UEFI PXE Stack',  dispZh:'PXE 协议栈',  val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv4PXE',    type:'Enumeration', def:'Enabled',disp:'IPv4 PXE',        dispZh:'IPv4 PXE',     val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicBootMode',   type:'Enumeration', def:'UEFI',   disp:'NIC Boot Mode',   dispZh:'网卡启动',     val:[E('UEFI'),E('Legacy PXE')], menu:'./Network', rb:true },
-
-        // Boot
-        { name:'BootMode',      type:'Enumeration', def:'Uefi',    disp:'Boot Mode',        dispZh:'启动模式',      val:[EN('Uefi','UEFI'),EN('LegacyBios','Legacy BIOS')], menu:'./Boot', rb:true },
-        { name:'FastBoot',      type:'Enumeration', def:'Disabled',disp:'Fast Boot',        dispZh:'快速启动',      val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'QuietBoot',     type:'Enumeration', def:'Enabled', disp:'Quiet Boot',       dispZh:'安静启动',      val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'BootTimeout',   type:'Integer',     def:10,       disp:'Boot Timeout (s)',  dispZh:'启动超时(秒)',  lb:1, ub:65535, st:1, menu:'./Boot' },
-        { name:'BootRetryCount',type:'Integer',     def:5,        disp:'Boot Retry Count',  dispZh:'重试次数',      lb:0, ub:10, st:1, menu:'./Boot' },
-
-        // Security
-        { name:'SecureBoot',     type:'Enumeration', def:'Disabled', disp:'Secure Boot',       dispZh:'安全启动',    val:[E('Enabled'),E('Disabled')], ro:true, menu:'./Security', rb:true },
-        { name:'TpmState',       type:'Enumeration', def:'Enabled',  disp:'TPM State',         dispZh:'TPM',         val:[E('Enabled'),E('Disabled')], menu:'./Security', rb:true },
-        { name:'AdminPassword',  type:'Password',    def:null,       disp:'Admin Password',    dispZh:'管理员密码',  mn:8, mx:32, menu:'./Security' },
-
-        // Power
-        { name:'PowerPolicy',          type:'Enumeration', def:'Efficient',disp:'Power Policy',   dispZh:'电源策略',    val:[EN('Perf','Max Performance'),EN('Efficient','Efficient')], menu:'./Power', rb:true },
-        { name:'AcPowerRestorePolicy', type:'Enumeration', def:'On',       disp:'AC Power Restore',dispZh:'交流电恢复',  val:[EN('Off','Always Off'),EN('On','Always On'),EN('LastState','Last State')], menu:'./Power' },
-        { name:'PowerOnByLAN',         type:'Enumeration', def:'Disabled', disp:'Wake-on-LAN',    dispZh:'网络唤醒',     val:[E('Enabled'),E('Disabled')], menu:'./Power' },
-        { name:'FanControlMode',       type:'Enumeration', def:'Auto',     disp:'Fan Control',    dispZh:'风扇控制',     val:[E('Auto'),E('Manual')], menu:'./Power' },
-        { name:'FanSpeedLowLimit',     type:'Integer',     def:15,         disp:'Fan Min (%)',    dispZh:'风扇最低(%)',  help:'4U lower min fan for noise.', lb:5, ub:100, st:5, menu:'./Power' },
-        { name:'PowerCapEnable',       type:'Enumeration', def:'Enabled',  disp:'Power Capping',   dispZh:'功率封顶',     val:[E('Enabled'),E('Disabled')], sc:'腾讯', menu:'./Power' },
-        { name:'PowerCapValue',        type:'Integer',     def:1400,       disp:'Power Cap (W)',   dispZh:'功率封顶(瓦)', lb:200, ub:3500, st:10, sc:'腾讯', menu:'./Power' },
-
-        // Advanced
-        { name:'HardwarePrefetcher',type:'Enumeration', def:'Enabled', disp:'Hardware Prefetcher',dispZh:'硬件预取器',  val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AdjacentCachePrefetch',type:'Enumeration',def:'Enabled',disp:'Adjacent Prefetch', dispZh:'邻接预取',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AESNI',             type:'Enumeration', def:'Enabled', disp:'Intel AES-NI',       dispZh:'AES-NI',       val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'Above4GDecoding',   type:'Enumeration', def:'Enabled', disp:'Above 4G Decoding',  dispZh:'4G以上解码',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'PcieMaxLinkSpeed',  type:'Enumeration', def:'Auto',    disp:'PCIe Max Speed',     dispZh:'PCIe 速率',    val:[E('Auto'),E('Gen3'),E('Gen4'),E('Gen5')], menu:'./Advanced', rb:true },
-        { name:'PcieAspmSupport',   type:'Enumeration', def:'Disabled',disp:'PCIe ASPM',          dispZh:'PCIe ASPM',    help:'Disabled for storage latency stability.', val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'UsbPortsAll',       type:'Enumeration', def:'Enabled', disp:'All USB Ports',      dispZh:'所有USB',      val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialAEnabled',    type:'Enumeration', def:'Enabled', disp:'Serial COM1',        dispZh:'串口 COM1',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialBaudRate',    type:'Enumeration', def:'115200',  disp:'Serial Baud',        dispZh:'波特率',       val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')], menu:'./Advanced' },
-        { name:'ConsoleRedirect',   type:'Enumeration', def:'Enabled', disp:'Console Redir',      dispZh:'控制台重定向', val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'PerfProfile',       type:'Enumeration', def:'Throughput',disp:'Perf Profile',     dispZh:'性能配置档',   help:'Throughput optimized for streaming I/O.', val:[EN('Throughput','Throughput'),EN('Efficient','Efficient'),EN('MaxPerf','Max')], menu:'./Advanced', rb:true },
-
-        // Server Mgmt
-        { name:'BmcWatchdog',        type:'Enumeration', def:'Enabled',  disp:'BMC Watchdog',    dispZh:'BMC 看门狗',   val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcWatchdogTimeout', type:'Integer',     def:600,        disp:'Watchdog Timeout',dispZh:'超时(秒)',      lb:60, ub:3600, st:60, menu:'./ServerMgmt' },
-        { name:'OsWatchdogTimer',    type:'Enumeration', def:'Enabled',  disp:'OS Watchdog',     dispZh:'OS 看门狗',    val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'SolEnabled',         type:'Enumeration', def:'Enabled',  disp:'Serial Over LAN', dispZh:'SOL',          val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcLanMode',         type:'Enumeration', def:'Dedicated',disp:'BMC LAN Mode',    dispZh:'BMC 网口模式', val:[E('Dedicated'),EN('SharedLOM','Shared LOM')], sc:'腾讯', menu:'./ServerMgmt' },
-        { name:'BmcIPv4Address',     type:'String',      def:'10.0.0.110',disp:'BMC IPv4',      dispZh:'BMC IPv4',     ro:true, menu:'./ServerMgmt' },
-        { name:'BmcMacAddress',      type:'String',      def:'00:1E:3F:5A:6B:7C',disp:'BMC MAC',dispZh:'BMC MAC',     ro:true, menu:'./ServerMgmt' },
-
-        // Misc
-        { name:'NumLock',       type:'Enumeration', def:'On',     disp:'NumLock',         dispZh:'NumLock',       val:[E('On'),E('Off')], menu:'./Misc' },
-        { name:'CpuErrLog',     type:'Enumeration', def:'Enabled',disp:'CPU Error Log',    dispZh:'CPU 错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'MemErrLog',     type:'Enumeration', def:'Enabled',disp:'Mem Error Log',    dispZh:'内存错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'PcieErrLog',    type:'Enumeration', def:'Enabled',disp:'PCIe Error Log',   dispZh:'PCIe 错误日志', val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'WheaSupport',   type:'Enumeration', def:'Enabled',disp:'WHEA Support',     dispZh:'WHEA',          val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-    ]
-};
-
-/* ================================================================
- * 机型 4: FusionServer 2488H V7 — 2U4P 高端多路
- * ================================================================ */
-const MODEL_2488HV7 = {
-    productName: 'FusionServer 2488H V7',
-    systemId: 'FUSION_2488HV7',
-    firmwareVersion: 'iBMC V695 v3.48',
-    attrs: [
-        { name:'BiosVersion',        type:'String', def:'V695', disp:'BIOS Version',  dispZh:'BIOS 版本',   menu:'./', ro:true },
-        { name:'ProductName',        type:'String', def:'FusionServer 2488H V7',disp:'Product Name',dispZh:'产品名称', menu:'./', ro:true },
-        { name:'BiosReleaseDate',    type:'String', def:'2026-04-01',disp:'BIOS Date',dispZh:'发布日期', menu:'./', ro:true },
-        { name:'CpuMicrocodeVersion',type:'String', def:'0x3C0001A0',disp:'CPU Microcode',dispZh:'CPU 微码',  menu:'./', ro:true },
-
-        // ---- Processor (4P specific: UPI, NUMA per socket, more cores) ----
-        { name:'IntelHyperThreading',      type:'Enumeration', def:'Enabled',  disp:'Hyper-Threading',       dispZh:'超线程',          val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ActiveCoresPerProcessor',  type:'Integer',     def:0,          disp:'Active Cores/Proc',     dispZh:'每处理器核心数',  lb:0, ub:60, st:1, menu:'./Processor', rb:true },
-        { name:'IntelVT',                  type:'Enumeration', def:'Enabled',  disp:'Intel VT-x',            dispZh:'VT-x',             val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'IntelVTd',                 type:'Enumeration', def:'Enabled',  disp:'Intel VT-d',            dispZh:'VT-d',             val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcTurboMode',            type:'Enumeration', def:'Enabled',  disp:'Turbo Boost',           dispZh:'Turbo',            val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcCStates',              type:'Enumeration', def:'Enabled',  disp:'C-States',              dispZh:'C状态',            val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-        { name:'ProcConfigTDP',            type:'Enumeration', def:'Nominal',  disp:'Configurable TDP',      dispZh:'可配置TDP',       val:[E('Nominal'),E('Maximum'),EN('Reduced','Reduced')], menu:'./Processor', sc:'华为', rb:true },
-        // 4P interconnect
-        { name:'UpiLinkSpeed',             type:'Enumeration', def:'Auto',     disp:'UPI Link Speed',        dispZh:'UPI 链路速率',     help:'Ultra Path Interconnect speed between CPUs.', helpZh:'CPU间UPI互联速率。', val:[E('Auto'),E('16GT'),E('20GT'),E('24GT')], menu:'./Processor', rb:true },
-        { name:'UpiLinkEnable',            type:'Integer',     def:3,          disp:'UPI Links Per Socket',  dispZh:'每路UPI链路数',    help:'Active UPI links per CPU socket.', helpZh:'每CPU活动UPI链路。', lb:1, ub:3, st:1, menu:'./Processor', rb:true },
-        { name:'UpiPrefetch',              type:'Enumeration', def:'Enabled',  disp:'UPI Prefetch',          dispZh:'UPI 预取',         help:'Prefetch across UPI for cross-socket memory.', val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ClxNumaPerSocket',         type:'Enumeration', def:'Auto',     disp:'NUMA Per Socket',       dispZh:'每路NUMA域数',     help:'NUMA domains per socket for 4P.', val:[E('Auto'),E('1'),E('2'),E('4')], menu:'./Processor', rb:true },
-        { name:'XptPrefetch',              type:'Enumeration', def:'Enabled',  disp:'XPT Remote Prefetch',   dispZh:'XPT 远程预取',     help:'Remote socket cache prefetch for 4P.', val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'StaleAtoS',                type:'Enumeration', def:'Enabled',  disp:'Stale AtoS',            dispZh:'陈旧AtoS优化',     help:'Directory-based stale A-to-S optimization.', val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-
-        // Memory (4P — full mirror, interleave granularity)
-        { name:'TotalMemSize',        type:'String', def:'2048 GB',disp:'Total Memory',       dispZh:'总内存',     menu:'./Memory', ro:true },
-        { name:'MemSpeed',            type:'Enumeration', def:'Auto',disp:'Memory Speed',     dispZh:'内存速率',   val:[E('Auto'),E('5600'),E('5200'),E('4800'),E('4400')], menu:'./Memory', rb:true },
-        { name:'MemVoltage',          type:'Enumeration', def:'1.1V',disp:'Memory Voltage',   dispZh:'内存电压',   val:[E('1.1V'),E('1.2V')], menu:'./Memory' },
-        { name:'MemPatrolScrub',      type:'Enumeration', def:'Enabled',disp:'Patrol Scrub',  dispZh:'内存巡检',   val:[E('Enabled'),E('Disabled')], menu:'./Memory' },
-        { name:'MemNumaMode',         type:'Enumeration', def:'Enabled',disp:'NUMA Optimize', dispZh:'NUMA 优化',  val:[E('Enabled'),E('Disabled')], menu:'./Memory', rb:true },
-        { name:'MemMirrorMode',       type:'Enumeration', def:'Disabled',disp:'Memory Mirror',dispZh:'内存镜像',   help:'Full mirror halves capacity; critical for 4P RAS.', val:[E('Disabled'),E('Enabled'),E('Spare'),EN('FullMirror','Full Mirror')], menu:'./Memory', rb:true },
-        { name:'MemRASMode',          type:'Enumeration', def:'MaxRel',disp:'Memory RAS Mode', dispZh:'内存RAS',    help:'4P mission-critical RAS config.', val:[EN('MaxPerf','Max Performance'),EN('MaxRel','Max Reliability'),EN('ADDDC','ADDDC')], menu:'./Memory', sc:'华为', rb:true },
-        { name:'MemInterleaveGran',   type:'Enumeration', def:'Auto',disp:'Interleave Granularity',dispZh:'交织粒度',help:'Memory interleave granularity for 4P access.', val:[E('Auto'),E('256B'),E('4KB'),E('1GB')], menu:'./Memory', rb:true },
-        { name:'MemRankSparing',      type:'Enumeration', def:'Enabled',disp:'Rank Sparing',   dispZh:'Rank 备用',   help:'Hot-spare memory ranks for 4P RAS.', val:[E('Enabled'),E('Disabled')], menu:'./Memory', rb:true },
-
-        // Storage
-        { name:'SataController',  type:'Enumeration', def:'Enabled',disp:'SATA Controller',dispZh:'SATA 控制器',val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'SataMode',        type:'Enumeration', def:'AHCI',   disp:'SATA Mode',      dispZh:'SATA 模式',  val:[E('AHCI'),E('RAID')], menu:'./Storage', rb:true },
-        { name:'NvmeRaidMode',    type:'Enumeration', def:'Disabled',disp:'NVMe RAID',     dispZh:'NVMe RAID',   val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'SataHotplugCap',  type:'Enumeration', def:'Enabled',disp:'SATA Hot Plug',  dispZh:'热插拔',     val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'OnboardRaidCtrl', type:'Enumeration', def:'Enabled',disp:'Onboard RAID',   dispZh:'板载RAID',   val:[E('Enabled'),E('Disabled')], menu:'./Storage', sc:'华为', rb:true },
-
-        // Network
-        { name:'NicPXEStack',  type:'Enumeration', def:'Enabled', disp:'UEFI PXE Stack',dispZh:'PXE 协议栈',val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv4PXE',   type:'Enumeration', def:'Enabled', disp:'IPv4 PXE',      dispZh:'IPv4 PXE',  val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv6PXE',   type:'Enumeration', def:'Enabled', disp:'IPv6 PXE',      dispZh:'IPv6 PXE',  val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicBootMode',  type:'Enumeration', def:'UEFI',    disp:'NIC Boot Mode', dispZh:'网卡启动',  val:[E('UEFI'),E('Legacy PXE')], menu:'./Network', rb:true },
-
-        // Boot
-        { name:'BootMode',      type:'Enumeration', def:'Uefi',    disp:'Boot Mode',       dispZh:'启动模式',     val:[EN('Uefi','UEFI'),EN('LegacyBios','Legacy BIOS')], menu:'./Boot', rb:true },
-        { name:'FastBoot',      type:'Enumeration', def:'Disabled',disp:'Fast Boot',       dispZh:'快速启动',     val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'QuietBoot',     type:'Enumeration', def:'Disabled',disp:'Quiet Boot',      dispZh:'安静启动',     val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'BootTimeout',   type:'Integer',     def:10,       disp:'Boot Timeout (s)', dispZh:'启动超时(秒)', lb:1, ub:65535, st:1, menu:'./Boot' },
-        { name:'BootRetryCount',type:'Integer',     def:1,        disp:'Boot Retry Count', dispZh:'重试次数',     lb:0, ub:3, st:1, menu:'./Boot' },
-
-        // Security
-        { name:'SecureBoot',        type:'Enumeration', def:'Disabled',disp:'Secure Boot',      dispZh:'安全启动',    val:[E('Enabled'),E('Disabled')], ro:true, menu:'./Security', rb:true },
-        { name:'SecureBootMode',    type:'Enumeration', def:'Standard',disp:'Secure Boot Mode', dispZh:'安全启动模式',val:[E('Standard'),E('Custom')], menu:'./Security', rb:true },
-        { name:'TpmState',          type:'Enumeration', def:'Enabled', disp:'TPM State',        dispZh:'TPM',         val:[E('Enabled'),E('Disabled')], menu:'./Security', rb:true },
-        { name:'TpmActivePcrBanks', type:'Enumeration', def:'SHA256',  disp:'TPM PCR Banks',    dispZh:'PCR 存储区',  val:[E('SHA1'),E('SHA256'),EN('SHA1_SHA256','Both')], menu:'./Security', rb:true },
-        { name:'AdminPassword',     type:'Password',    def:null,      disp:'Admin Password',   dispZh:'管理员密码',  mn:8, mx:32, menu:'./Security' },
-        { name:'UserPassword',      type:'Password',    def:null,      disp:'User Password',    dispZh:'用户密码',    mn:8, mx:32, menu:'./Security' },
-
-        // Power (4P — high power budget)
-        { name:'PowerPolicy',          type:'Enumeration', def:'MaxPerf', disp:'Power Policy',    dispZh:'电源策略',      val:[EN('MaxPerf','Max Performance'),EN('Efficient','Efficient')], menu:'./Power', rb:true },
-        { name:'AcPowerRestorePolicy', type:'Enumeration', def:'Off',     disp:'AC Restore',      dispZh:'交流电恢复',     val:[EN('Off','Always Off'),EN('On','Always On'),EN('LastState','Last State')], menu:'./Power' },
-        { name:'PowerOnDelay',         type:'Integer',     def:10,        disp:'Power-On Delay',   dispZh:'开机延迟(秒)',   help:'Staggered 4P power-on sequence.', lb:0, ub:120, st:5, menu:'./Power' },
-        { name:'FanControlMode',       type:'Enumeration', def:'Auto',    disp:'Fan Control',      dispZh:'风扇控制',       val:[E('Auto'),E('Manual')], menu:'./Power' },
-        { name:'FanSpeedLowLimit',     type:'Integer',     def:25,        disp:'Fan Min (%)',      dispZh:'风扇最低(%)',    lb:10, ub:100, st:5, menu:'./Power' },
-        { name:'PowerCapEnable',       type:'Enumeration', def:'Enabled', disp:'Power Capping',    dispZh:'功率封顶',       val:[E('Enabled'),E('Disabled')], sc:'华为', menu:'./Power' },
-        { name:'PowerCapValue',        type:'Integer',     def:2000,      disp:'Power Cap (W)',    dispZh:'功率封顶(瓦)',   lb:200, ub:4000, st:10, sc:'华为', menu:'./Power' },
-
-        // Advanced (all prefetchers + 4P specific)
-        { name:'HardwarePrefetcher',    type:'Enumeration', def:'Enabled', disp:'Hardware Prefetcher',dispZh:'硬件预取器',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AdjacentCachePrefetch', type:'Enumeration', def:'Enabled', disp:'Adjacent Prefetch',  dispZh:'邻接预取',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'DCUStreamPrefetcher',   type:'Enumeration', def:'Enabled', disp:'DCU Stream Pre',     dispZh:'DCU 流预取',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'DCUIPPrefetcher',       type:'Enumeration', def:'Enabled', disp:'DCU IP Pre',         dispZh:'DCU IP 预取',  val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'LLCPrefetch',           type:'Enumeration', def:'Enabled', disp:'LLC Prefetch',       dispZh:'LLC 预取',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AESNI',                 type:'Enumeration', def:'Enabled', disp:'Intel AES-NI',       dispZh:'AES-NI',        val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'IntelSGX',              type:'Enumeration', def:'Disabled',disp:'Intel SGX',          dispZh:'SGX',           val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'IntelTME',              type:'Enumeration', def:'Enabled', disp:'Intel TME',          dispZh:'全内存加密',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'Above4GDecoding',   type:'Enumeration', def:'Enabled',  disp:'Above 4G Decoding', dispZh:'4G以上解码',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'ResizableBAR',      type:'Enumeration', def:'Enabled',  disp:'Re-Size BAR',       dispZh:'可调整BAR',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'PcieMaxLinkSpeed',  type:'Enumeration', def:'Auto',     disp:'PCIe Max Speed',    dispZh:'PCIe 速率',     val:[E('Auto'),E('Gen4'),E('Gen5')], menu:'./Advanced', rb:true },
-        { name:'PcieAspmSupport',   type:'Enumeration', def:'Disabled', disp:'PCIe ASPM',         dispZh:'PCIe ASPM',     help:'Disabled for 4P latency stability.', val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'SriovPCIe',         type:'Enumeration', def:'Enabled',  disp:'SR-IOV (PCIe)',     dispZh:'PCIe SR-IOV',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'Pcie10BitTag',      type:'Enumeration', def:'Enabled',  disp:'PCIe 10-bit Tag',   dispZh:'10位标签',      val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'UsbPortsAll',       type:'Enumeration', def:'Enabled',  disp:'All USB Ports',     dispZh:'所有USB',       val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialAEnabled',    type:'Enumeration', def:'Enabled',  disp:'Serial COM1',       dispZh:'串口 COM1',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialBaudRate',    type:'Enumeration', def:'115200',   disp:'Serial Baud',       dispZh:'波特率',        val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')], menu:'./Advanced' },
-        { name:'ConsoleRedirect',   type:'Enumeration', def:'Enabled',  disp:'Console Redir',     dispZh:'控制台重定向',  val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'PerfProfile',       type:'Enumeration', def:'MaxPerf',  disp:'Perf Profile',      dispZh:'性能配置档',    help:'MaxPerf for 4P database workloads.', val:[EN('MaxPerf','Max Performance'),EN('Efficient','Efficient'),EN('Latency','Latency Opt')], menu:'./Advanced', rb:true },
-        { name:'EnergyEfficientTurbo',type:'Enumeration',def:'Disabled',disp:'Energy Eff Turbo',   dispZh:'节能Turbo',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'SubNumaClustering',    type:'Enumeration',def:'Enabled',disp:'SNC',                 dispZh:'子NUMA集群',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'DdrSpeedOptimization', type:'Enumeration',def:'Performance',disp:'DDR Speed Opt',   dispZh:'DDR 优化',      val:[EN('Balanced','Balanced'),EN('Performance','Performance'),EN('Stability','Stability')], menu:'./Advanced', rb:true },
-
-        // Server Mgmt
-        { name:'BmcWatchdog',         type:'Enumeration', def:'Enabled',  disp:'BMC Watchdog',     dispZh:'BMC 看门狗',   val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcWatchdogTimeout',  type:'Integer',     def:600,        disp:'Watchdog Timeout', dispZh:'超时(秒)',     lb:60, ub:3600, st:60, menu:'./ServerMgmt' },
-        { name:'OsWatchdogTimer',     type:'Enumeration', def:'Disabled', disp:'OS Watchdog',      dispZh:'OS 看门狗',    val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'SolEnabled',          type:'Enumeration', def:'Enabled',  disp:'Serial Over LAN',  dispZh:'SOL',          val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcLanMode',          type:'Enumeration', def:'SharedLOM',disp:'BMC LAN Mode',     dispZh:'BMC 网口',     val:[E('Dedicated'),EN('SharedLOM','Shared LOM')], sc:'华为', menu:'./ServerMgmt' },
-        { name:'ErpLot6PowerMode',    type:'Enumeration', def:'Enabled',  disp:'ERP Lot 6',        dispZh:'ERP 节能',     val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'SysMaintenanceSwitch',type:'Enumeration', def:'Disabled', disp:'Maintenance Switch',dispZh:'维护模式',    val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcIPv4Address',      type:'String',      def:'10.20.30.1',disp:'BMC IPv4',       dispZh:'BMC IPv4',     ro:true, menu:'./ServerMgmt' },
-        { name:'BmcMacAddress',       type:'String',      def:'00:1C:2E:4F:6A:8B',disp:'BMC MAC',  dispZh:'BMC MAC',      ro:true, menu:'./ServerMgmt' },
-
-        // Misc
-        { name:'NumLock',     type:'Enumeration', def:'On',      disp:'NumLock',         dispZh:'NumLock',       val:[E('On'),E('Off')], menu:'./Misc' },
-        { name:'CpuErrLog',   type:'Enumeration', def:'Enabled', disp:'CPU Error Log',    dispZh:'CPU 错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'MemErrLog',   type:'Enumeration', def:'Enabled', disp:'Mem Error Log',    dispZh:'内存错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'PcieErrLog',  type:'Enumeration', def:'Enabled', disp:'PCIe Error Log',   dispZh:'PCIe 错误日志', val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'WheaSupport', type:'Enumeration', def:'Enabled', disp:'WHEA Support',     dispZh:'WHEA',          val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-    ]
-};
-
-/* ================================================================
- * 机型 5: FusionServer 2288H V6 — 2U2P Ice Lake (V6 对比)
- * ================================================================ */
-const MODEL_2288HV6 = {
-    productName: 'FusionServer 2288H V6',
-    systemId: 'FUSION_2288HV6',
-    firmwareVersion: 'iBMC V590 v2.68',
-    attrs: [
-        { name:'BiosVersion',        type:'String', def:'V590',       disp:'BIOS Version',      dispZh:'BIOS 版本',  menu:'./', ro:true },
-        { name:'BiosReleaseDate',    type:'String', def:'2025-11-20', disp:'BIOS Date',         dispZh:'发布日期',   menu:'./', ro:true },
-        { name:'ProductName',        type:'String', def:'FusionServer 2288H V6', disp:'Product Name', dispZh:'产品名称', menu:'./', ro:true },
-        { name:'BoardSerialNumber',  type:'String', def:'SNV62345678A',disp:'Board SN',         dispZh:'主板序列号', menu:'./', ro:true },
-        { name:'CpuMicrocodeVersion',type:'String', def:'0xD0003B0',  disp:'CPU Microcode',     dispZh:'CPU 微码',   menu:'./', ro:true },
-
-        // Processor (Ice Lake Xeon)
-        { name:'IntelHyperThreading',      type:'Enumeration', def:'Enabled',  disp:'Hyper-Threading',    dispZh:'超线程',        val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ActiveCoresPerProcessor',  type:'Integer',     def:0,          disp:'Active Cores',       dispZh:'启用核心数',    lb:0, ub:40, st:1, menu:'./Processor', rb:true },
-        { name:'IntelVT',                  type:'Enumeration', def:'Enabled',  disp:'Intel VT-x',         dispZh:'VT-x',           val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'IntelVTd',                 type:'Enumeration', def:'Enabled',  disp:'Intel VT-d',         dispZh:'VT-d',           val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcTurboMode',            type:'Enumeration', def:'Enabled',  disp:'Turbo Boost 2.0',    dispZh:'Turbo 加速',     val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        { name:'ProcCStates',              type:'Enumeration', def:'Enabled',  disp:'C-States',           dispZh:'C状态节能',      val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-        { name:'ProcC1e',                  type:'Enumeration', def:'Enabled',  disp:'C1E Enhanced',       dispZh:'C1E 增强暂停',   val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-        { name:'ProcConfigTDP',            type:'Enumeration', def:'Nominal',  disp:'Configurable TDP',   dispZh:'可配置TDP',      val:[E('Nominal'),E('Maximum')], menu:'./Processor', sc:'京东', rb:true },
-        { name:'SR_IOV_Support',           type:'Enumeration', def:'Disabled', disp:'SR-IOV',              dispZh:'SR-IOV',         val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-        // Ice Lake specific
-        { name:'SpeedStep_PState',         type:'Enumeration', def:'Enabled',  disp:'SpeedStep (P-State)',dispZh:'SpeedStep',       help:'Ice Lake EIST power management.', val:[E('Enabled'),E('Disabled')], menu:'./Processor' },
-        { name:'IntelSpeedSelect',         type:'Enumeration', def:'Disabled', disp:'Speed Select (SST)',  dispZh:'Speed Select',   help:'Intel SST for configurable base frequency.', val:[E('Enabled'),E('Disabled')], menu:'./Processor', rb:true },
-
-        // Memory (DDR4 on Ice Lake)
-        { name:'TotalMemSize',    type:'String', def:'512 GB',disp:'Total Memory',   dispZh:'总内存',     menu:'./Memory', ro:true },
-        { name:'MemSpeed',        type:'Enumeration', def:'Auto',disp:'Memory Speed', dispZh:'内存速率',   help:'DDR4 speed on Ice Lake platform.', val:[E('Auto'),E('3200'),E('2933'),E('2666'),E('2400')], menu:'./Memory', rb:true },
-        { name:'MemVoltage',      type:'Enumeration', def:'Auto',disp:'Memory Voltage',dispZh:'内存电压',  help:'DDR4 DIMM voltage options.', val:[E('Auto'),E('1.2V'),E('1.35V')], menu:'./Memory' },
-        { name:'MemPatrolScrub',  type:'Enumeration', def:'Enabled',disp:'Patrol Scrub',dispZh:'内存巡检', val:[E('Enabled'),E('Disabled')], menu:'./Memory' },
-        { name:'MemNumaMode',     type:'Enumeration', def:'Enabled',disp:'NUMA',        dispZh:'NUMA 优化', val:[E('Enabled'),E('Disabled')], menu:'./Memory', rb:true },
-        { name:'MemMirrorMode',   type:'Enumeration', def:'Disabled',disp:'Mirror Mode', dispZh:'内存镜像',  val:[E('Disabled'),E('Enabled'),E('Spare')], menu:'./Memory', rb:true },
-        { name:'MemRASMode',      type:'Enumeration', def:'MaxPerf',disp:'Memory RAS',   dispZh:'内存RAS',   val:[EN('MaxPerf','Max Performance'),EN('MaxRel','Max Reliability'),EN('ADDDC','ADDDC')], menu:'./Memory', rb:true },
-        { name:'DcpmmTotalCapacity',type:'String',   def:'0 GB',   disp:'PMem Total',   dispZh:'傲腾总量',   help:'Optane PMem 200 series on Ice Lake.', menu:'./Memory', ro:true, sc:'京东' },
-        { name:'DcpmmAppDirectMode',type:'Enumeration',def:'Disabled',disp:'PMem AppDirect',dispZh:'PMem直通', val:[E('Enabled'),E('Disabled')], menu:'./Memory', sc:'京东', rb:true },
-
-        // Storage
-        { name:'SataController',   type:'Enumeration', def:'Enabled', disp:'SATA Controller',   dispZh:'SATA 控制器', val:[E('Enabled'),E('Disabled')], menu:'./Storage', rb:true },
-        { name:'SataMode',         type:'Enumeration', def:'AHCI',    disp:'SATA Mode',         dispZh:'SATA 模式',   val:[E('AHCI'),E('RAID'),E('Legacy')], menu:'./Storage', rb:true },
-        { name:'SataHotplugCap',   type:'Enumeration', def:'Enabled', disp:'SATA Hot Plug',     dispZh:'SATA 热插拔', val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataPorts_0_3',    type:'Enumeration', def:'Enabled', disp:'SATA 0-3',          dispZh:'SATA 0-3',    val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'SataPorts_4_7',    type:'Enumeration', def:'Enabled', disp:'SATA 4-7',          dispZh:'SATA 4-7',    val:[E('Enabled'),E('Disabled')], menu:'./Storage' },
-        { name:'NvmeRaidMode',     type:'Enumeration', def:'Disabled',disp:'VROC NVMe RAID',    dispZh:'VROC RAID',   help:'Intel VROC on Ice Lake.', val:[E('Enabled'),E('Disabled')], menu:'./Storage', sc:'京东', rb:true },
-        { name:'OnboardRaidCtrl',  type:'Enumeration', def:'Enabled', disp:'Onboard RAID',      dispZh:'板载RAID',    help:'LSI 9460 on Ice Lake.', val:[E('Enabled'),E('Disabled')], menu:'./Storage', sc:'京东', rb:true },
-
-        // Network
-        { name:'NicPXEStack',   type:'Enumeration', def:'Enabled',disp:'UEFI PXE Stack', dispZh:'PXE 协议栈', val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicHTTPBoot',   type:'Enumeration', def:'Disabled',disp:'HTTP Boot',     dispZh:'HTTP 启动',  val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv4PXE',    type:'Enumeration', def:'Enabled',disp:'IPv4 PXE',       dispZh:'IPv4 PXE',   val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicIPv6PXE',    type:'Enumeration', def:'Disabled',disp:'IPv6 PXE',      dispZh:'IPv6 PXE',   val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicVlanSupport',type:'Enumeration', def:'Disabled',disp:'VLAN',          dispZh:'VLAN 标记',  val:[E('Enabled'),E('Disabled')], menu:'./Network' },
-        { name:'NicBootMode',   type:'Enumeration', def:'UEFI',   disp:'NIC Boot Mode',  dispZh:'网卡启动',   val:[E('UEFI'),E('Legacy PXE')], menu:'./Network', rb:true },
-        { name:'IscsiBootSupport',type:'Enumeration',def:'Disabled',disp:'iSCSI Boot',   dispZh:'iSCSI 启动', val:[E('Enabled'),E('Disabled')], menu:'./Network', rb:true },
-
-        // Boot
-        { name:'BootMode',      type:'Enumeration', def:'Uefi',    disp:'Boot Mode',       dispZh:'启动模式',     val:[EN('Uefi','UEFI'),EN('LegacyBios','Legacy BIOS')], menu:'./Boot', rb:true },
-        { name:'FastBoot',      type:'Enumeration', def:'Enabled', disp:'Fast Boot',       dispZh:'快速启动',     val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'QuietBoot',     type:'Enumeration', def:'Enabled', disp:'Quiet Boot',      dispZh:'安静启动',     val:[E('Enabled'),E('Disabled')], menu:'./Boot' },
-        { name:'BootTimeout',   type:'Integer',     def:5,        disp:'Boot Timeout (s)', dispZh:'启动超时(秒)', lb:1, ub:65535, st:1, menu:'./Boot' },
-        { name:'BootRetryCount',type:'Integer',     def:3,        disp:'Boot Retry Count', dispZh:'重试次数',     lb:0, ub:10, st:1, menu:'./Boot' },
-
-        // Security
-        { name:'SecureBoot',         type:'Enumeration', def:'Disabled',disp:'Secure Boot',      dispZh:'安全启动',    val:[E('Enabled'),E('Disabled')], ro:true, menu:'./Security', rb:true },
-        { name:'SecureBootMode',     type:'Enumeration', def:'Standard',disp:'Secure Boot Mode', dispZh:'安全启动模式',val:[E('Standard'),E('Custom')], menu:'./Security', rb:true },
-        { name:'TpmState',           type:'Enumeration', def:'Enabled', disp:'TPM 2.0 State',    dispZh:'TPM 状态',    val:[E('Enabled'),E('Disabled')], menu:'./Security', rb:true },
-        { name:'TpmActivePcrBanks',  type:'Enumeration', def:'SHA256',  disp:'TPM PCR Banks',    dispZh:'PCR 存储区',  val:[E('SHA1'),E('SHA256')], menu:'./Security', rb:true },
-        { name:'TpmClear',           type:'Enumeration', def:'No',      disp:'Clear TPM',        dispZh:'清除TPM',     val:[E('No'),EN('YesReset','Yes, Next Reset')], menu:'./Security', rb:true },
-        { name:'AdminPassword',      type:'Password',    def:null,      disp:'Admin Password',   dispZh:'管理员密码',  mn:8, mx:32, menu:'./Security' },
-        { name:'UserPassword',       type:'Password',    def:null,      disp:'User Password',    dispZh:'用户密码',    mn:8, mx:32, menu:'./Security' },
-        { name:'ChassisIntrusion',   type:'Enumeration', def:'Disabled',disp:'Chassis Intrusion',dispZh:'机箱入侵',    val:[E('Enabled'),E('Disabled')], menu:'./Security' },
-
-        // Power
-        { name:'PowerPolicy',          type:'Enumeration', def:'Efficient',disp:'Power Policy',    dispZh:'电源策略',   val:[EN('Perf','Max Performance'),EN('Efficient','Efficient'),EN('Save','Power Saving')], menu:'./Power', rb:true },
-        { name:'AcPowerRestorePolicy', type:'Enumeration', def:'LastState',disp:'AC Restore',      dispZh:'交流电恢复', val:[EN('Off','Always Off'),EN('On','Always On'),EN('LastState','Last State')], menu:'./Power' },
-        { name:'PowerOnByLAN',         type:'Enumeration', def:'Enabled', disp:'Wake-on-LAN',     dispZh:'网络唤醒',    val:[E('Enabled'),E('Disabled')], menu:'./Power' },
-        { name:'PowerOnDelay',         type:'Integer',     def:0,        disp:'Power-On Delay',   dispZh:'开机延迟',   lb:0, ub:600, st:5, menu:'./Power' },
-        { name:'FanControlMode',       type:'Enumeration', def:'Auto',    disp:'Fan Control',     dispZh:'风扇控制',   val:[E('Auto'),E('Manual')], menu:'./Power' },
-        { name:'FanSpeedLowLimit',     type:'Integer',     def:20,       disp:'Fan Min (%)',      dispZh:'风扇最低',   lb:5, ub:100, st:5, menu:'./Power' },
-        { name:'PowerCapEnable',       type:'Enumeration', def:'Disabled',disp:'Power Capping',   dispZh:'功率封顶',   val:[E('Enabled'),E('Disabled')], sc:'京东', menu:'./Power' },
-        { name:'PowerCapValue',        type:'Integer',     def:600,      disp:'Power Cap (W)',    dispZh:'功率封顶(瓦)',lb:100, ub:2000, st:10, sc:'京东', menu:'./Power' },
-        { name:'RtcWakeup',            type:'Enumeration', def:'Disabled',disp:'RTC Wakeup',      dispZh:'RTC 定时',   val:[E('Enabled'),E('Disabled')], menu:'./Power' },
-
-        // Advanced (Ice Lake: PCIe 4.0, fewer Gen5 features)
-        { name:'HardwarePrefetcher',    type:'Enumeration', def:'Enabled',  disp:'Hardware Prefetcher',dispZh:'硬件预取器',  val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AdjacentCachePrefetch', type:'Enumeration', def:'Enabled',  disp:'Adjacent Prefetch',  dispZh:'邻接预取',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'DCUStreamPrefetcher',   type:'Enumeration', def:'Enabled',  disp:'DCU Stream Pre',     dispZh:'DCU 流预取',  val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'DCUIPPrefetcher',       type:'Enumeration', def:'Enabled',  disp:'DCU IP Pre',         dispZh:'DCU IP 预取', val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'AESNI',                 type:'Enumeration', def:'Enabled',  disp:'Intel AES-NI',       dispZh:'AES-NI',       val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'IntelSGX',              type:'Enumeration', def:'Disabled', disp:'Intel SGX',          dispZh:'SGX',          val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'Above4GDecoding',   type:'Enumeration', def:'Enabled',  disp:'Above 4G Decoding', dispZh:'4G以上解码',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'ResizableBAR',      type:'Enumeration', def:'Enabled',  disp:'Re-Size BAR',       dispZh:'可调整BAR',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'PcieMaxLinkSpeed',  type:'Enumeration', def:'Auto',     disp:'PCIe Max Speed',    dispZh:'PCIe 速率',    help:'PCIe 4.0 max on Ice Lake.', val:[E('Auto'),E('Gen1'),E('Gen2'),E('Gen3'),E('Gen4')], menu:'./Advanced', rb:true },
-        { name:'PcieAspmSupport',   type:'Enumeration', def:'Auto',     disp:'PCIe ASPM',         dispZh:'PCIe ASPM',    val:[E('Auto'),E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'Pcie10BitTag',      type:'Enumeration', def:'Enabled',  disp:'PCIe 10-bit Tag',   dispZh:'10位标签',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'UsbPortsAll',       type:'Enumeration', def:'Enabled',  disp:'All USB Ports',     dispZh:'所有USB',      val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'UsbFrontPorts',     type:'Enumeration', def:'Enabled',  disp:'Front USB',         dispZh:'前置USB',      val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'UsbRearPorts',      type:'Enumeration', def:'Enabled',  disp:'Rear USB',          dispZh:'后置USB',      val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'UsbBootSupport',    type:'Enumeration', def:'Enabled',  disp:'USB Boot',           dispZh:'USB 启动',     val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'VGA_Primary',       type:'Enumeration', def:'Auto',     disp:'Primary Video',     dispZh:'主显示适配器', val:[E('Auto'),EN('Onboard','Onboard VGA'),EN('PCIe','PCIe VGA')], menu:'./Advanced', rb:true },
-        { name:'SerialAEnabled',    type:'Enumeration', def:'Enabled',  disp:'Serial COM1',       dispZh:'串口 COM1',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialBEnabled',    type:'Enumeration', def:'Disabled', disp:'Serial COM2',       dispZh:'串口 COM2',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-        { name:'SerialBaudRate',    type:'Enumeration', def:'115200',   disp:'Serial Baud',       dispZh:'波特率',       val:[E('9600'),E('19200'),E('38400'),E('57600'),E('115200')], menu:'./Advanced' },
-        { name:'ConsoleRedirect',   type:'Enumeration', def:'Enabled',  disp:'Console Redir',     dispZh:'控制台重定向', val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'PerfProfile',       type:'Enumeration', def:'Efficient',disp:'Perf Profile',      dispZh:'性能配置档',   val:[EN('MaxPerf','Max'),EN('Efficient','Efficient')], menu:'./Advanced', rb:true },
-        { name:'EnergyEfficientTurbo',type:'Enumeration',def:'Enabled', disp:'Energy Eff Turbo',   dispZh:'节能Turbo',    val:[E('Enabled'),E('Disabled')], menu:'./Advanced' },
-        { name:'SubNumaClustering',    type:'Enumeration',def:'Disabled',disp:'SNC',                dispZh:'子NUMA集群',   val:[E('Enabled'),E('Disabled')], menu:'./Advanced', rb:true },
-
-        // Server Mgmt
-        { name:'BmcWatchdog',          type:'Enumeration', def:'Enabled',  disp:'BMC Watchdog',     dispZh:'BMC 看门狗',  val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcWatchdogTimeout',   type:'Integer',     def:300,        disp:'Watchdog Timeout', dispZh:'超时(秒)',    lb:30, ub:1800, st:30, menu:'./ServerMgmt' },
-        { name:'OsWatchdogTimer',      type:'Enumeration', def:'Enabled',  disp:'OS Watchdog',      dispZh:'OS 看门狗',   val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'SolEnabled',           type:'Enumeration', def:'Enabled',  disp:'Serial Over LAN',  dispZh:'SOL',         val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcLanMode',           type:'Enumeration', def:'Dedicated',disp:'BMC LAN Mode',     dispZh:'BMC 网口',    val:[E('Dedicated'),EN('SharedLOM','Shared LOM')], sc:'京东', menu:'./ServerMgmt' },
-        { name:'ErpLot6PowerMode',     type:'Enumeration', def:'Disabled', disp:'ERP Lot 6',        dispZh:'ERP 节能',    val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'SysMaintenanceSwitch', type:'Enumeration', def:'Disabled', disp:'Maint Switch',     dispZh:'维护模式',    val:[E('Enabled'),E('Disabled')], menu:'./ServerMgmt' },
-        { name:'BmcIPv4Address',       type:'String',      def:'192.168.2.50',disp:'BMC IPv4',     dispZh:'BMC IPv4',    ro:true, menu:'./ServerMgmt' },
-        { name:'BmcMacAddress',        type:'String',      def:'00:1B:2C:3D:4E:50',disp:'BMC MAC', dispZh:'BMC MAC',     ro:true, menu:'./ServerMgmt' },
-
-        // Misc
-        { name:'NumLock',             type:'Enumeration', def:'On',      disp:'NumLock',             dispZh:'NumLock',       val:[E('On'),E('Off')], menu:'./Misc' },
-        { name:'CpuErrLog',           type:'Enumeration', def:'Enabled', disp:'CPU Error Log',        dispZh:'CPU 错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'MemErrLog',           type:'Enumeration', def:'Enabled', disp:'Mem Error Log',        dispZh:'内存错误日志',  val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'PcieErrLog',          type:'Enumeration', def:'Enabled', disp:'PCIe Error Log',       dispZh:'PCIe 错误日志', val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'WheaSupport',         type:'Enumeration', def:'Enabled', disp:'WHEA Support',         dispZh:'WHEA',          val:[E('Enabled'),E('Disabled')], menu:'./Misc' },
-        { name:'PxeIpVersion',        type:'Enumeration', def:'IPv4',    disp:'PXE IP Version',      dispZh:'PXE IP 版本',   val:[E('IPv4'),E('IPv6')], menu:'./Misc' },
-    ]
-};
-
-/* ================================================================
- * 所有机型定义 & 工厂函数
- * ================================================================ */
-const ALL_MODELS = [MODEL_2288HV7, MODEL_1288HV7, MODEL_5288V7, MODEL_2488HV7, MODEL_2288HV6];
-
-function buildModelProfile(model) {
-    const profile = createSystemProfile(model.productName, model.systemId, model.firmwareVersion);
-    buildMenus(profile);
-    buildAttrs(profile, model.attrs);
-    buildDeps(profile);
-    return profile;
-}
-
-function buildAllDemoProfiles() {
-    return ALL_MODELS.map(buildModelProfile);
-}
-
-// 兼容旧接口 (FUSION_DEMO 仍指向 2288H V7)
-const FUSION_DEMO = {
-    productName: MODEL_2288HV7.productName,
-    systemId: MODEL_2288HV7.systemId,
-    firmwareVersion: MODEL_2288HV7.firmwareVersion,
-    buildMenus(profile) { buildMenus(profile); },
-    buildAttributes(profile) { buildAttrs(profile, MODEL_2288HV7.attrs); },
-    buildDependencies(profile) { buildDeps(profile); }
-};
+function buildMenus(profile){for(const m of MENUS)profile.menuMap[m.MenuName]=createMenu(m);}
+function buildAttrs(profile,defs){for(const d of defs){const a=createAttribute({AttributeName:d.name,Type:d.type,DefaultValue:d.def,DisplayName:d.disp,displayNameZh:d.dispZh??null,HelpText:d.help??'',helpTextZh:null,MenuPath:d.menu,ReadOnly:d.ro??false,Immutable:false,ResetRequired:d.rb??false,SupportsRedfish:d.sr!==undefined?d.sr:true,AttributeScope:d.sc??'通用',Platforms:d.pl??[],Value:d.val??[],LowerBound:d.lb??null,UpperBound:d.ub??null,ScalarIncrement:d.st??null,MinLength:d.mn??null,MaxLength:d.mx??null,DisplayOrder:d.order??0});profile.attrMap[a.attributeName]=a;}}
+function buildModelProfile(model){const p=createSystemProfile(model.productName,model.systemId,model.firmwareVersion);buildMenus(p);buildAttrs(p,model.attrs);return p;}
+const MODEL_2288HV7=DEMO_MODEL;

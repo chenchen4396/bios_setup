@@ -106,6 +106,10 @@ const UITable = {
         countEl.textContent = '(' + filtered.length + ' 项)';
 
         const isBatch = AppState.isBatchEditing;
+
+        // 按 displayOrder 排序
+        filtered.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0) || a.attributeName.localeCompare(b.attributeName));
+
         let html = '';
         for (const attr of filtered) {
             html += isBatch
@@ -129,6 +133,9 @@ const UITable = {
                     if (AppState.confirmBatchEdit) AppState.confirmBatchEdit();
                 });
             }
+        } else {
+            // 拖拽排序（非批量模式）
+            this._bindRowDragEvents(tbody);
         }
     },
 
@@ -190,9 +197,11 @@ const UITable = {
         }
 
         const attrTitle = escA(helpEn);
+        const order = attr.displayOrder ?? 0;
 
-        return '<tr class="' + rowClass.trim() + '" data-attr="' + escA(attr.attributeName) + '">' +
-            '<td><span class="attr-value-cell" style="font-size:10px;color:var(--text-secondary);" title="' + escA(menuPath) + '">' + escH(menuPath) + '</span></td>' +
+        return '<tr class="' + rowClass.trim() + '" data-attr="' + escA(attr.attributeName) + '"' +
+            ' data-menu="' + escA(menuPath || '') + '" data-order="' + order + '" draggable="true">' +
+            '<td><span class="drag-handle-col" title="拖拽排序">⋮⋮</span><span class="attr-value-cell" style="font-size:10px;color:var(--text-secondary);" title="' + escA(menuPath) + '">' + escH(menuPath) + '</span></td>' +
             '<td><span class="attr-name-cell" title="' + attrTitle + '">' + escH(attr.attributeName) + '</span></td>' +
             '<td><span title="' + attrTitle + '">' + escH(displayNameEn) + '</span></td>' +
             '<td><span style="color:var(--text-secondary);">' + (displayNameZh ? escH(displayNameZh) : '<span style="color:var(--text-tertiary);">—</span>') + '</span></td>' +
@@ -331,5 +340,117 @@ const UITable = {
 
         const pathEl = document.getElementById('current-menu-path');
         if (pathEl) pathEl.textContent = '搜索结果';
+    },
+
+    /* ============ 属性行拖拽排序 ============ */
+
+    _dragRowData: null,
+
+    _bindRowDragEvents(tbody) {
+        const self = this;
+
+        tbody.addEventListener('dragstart', (e) => {
+            const row = e.target.closest('tr[data-attr]');
+            if (!row || !row.dataset.attr || row.dataset.batch === '1') return;
+
+            self._dragRowData = {
+                attrName: row.dataset.attr,
+                menu: row.dataset.menu || '',
+                order: parseInt(row.dataset.order) || 0,
+                el: row
+            };
+            row.classList.add('row-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', row.dataset.attr);
+        });
+
+        tbody.addEventListener('dragover', (e) => {
+            if (!self._dragRowData) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const row = e.target.closest('tr[data-attr]');
+            tbody.querySelectorAll('.row-drag-over').forEach(r => r.classList.remove('row-drag-over'));
+
+            if (row && row !== self._dragRowData.el &&
+                row.dataset.menu === self._dragRowData.menu &&
+                row.dataset.batch !== '1') {
+                row.classList.add('row-drag-over');
+            }
+        });
+
+        tbody.addEventListener('drop', (e) => {
+            e.preventDefault();
+            tbody.querySelectorAll('.row-drag-over').forEach(r => r.classList.remove('row-drag-over'));
+
+            if (!self._dragRowData) return;
+            const src = self._dragRowData;
+
+            const targetRow = e.target.closest('tr[data-attr]');
+            if (!targetRow || targetRow === src.el ||
+                targetRow.dataset.menu !== src.menu ||
+                targetRow.dataset.batch === '1') {
+                self._endRowDrag();
+                return;
+            }
+
+            // 收集同菜单下的所有行
+            const rows = tbody.querySelectorAll('tr[data-attr][data-menu="' + UICommon.escAttr(src.menu) + '"]');
+            const profile = AppState.currentProfile;
+            if (!profile) { self._endRowDrag(); return; }
+
+            const targetOrder = parseInt(targetRow.dataset.order) || 0;
+
+            // 重新分配 displayOrder
+            const ordered = [];
+            for (const r of rows) {
+                ordered.push({
+                    el: r,
+                    attrName: r.dataset.attr,
+                    order: parseInt(r.dataset.order) || 0
+                });
+            }
+
+            const srcIdx = ordered.findIndex(o => o.attrName === src.attrName);
+            const tgtIdx = ordered.findIndex(o => o.attrName === targetRow.dataset.attr);
+            if (srcIdx < 0 || tgtIdx < 0) { self._endRowDrag(); return; }
+
+            const [dragItem] = ordered.splice(srcIdx, 1);
+            ordered.splice(tgtIdx, 0, dragItem);
+
+            // 更新 attrMap 中的 displayOrder
+            let changed = false;
+            for (let i = 0; i < ordered.length; i++) {
+                const item = ordered[i];
+                const attr = profile.attrMap[item.attrName];
+                if (attr && attr.displayOrder !== i * 10) {
+                    attr.displayOrder = i * 10;
+                    changed = true;
+                }
+                item.el.dataset.order = i * 10;
+            }
+
+            if (changed && typeof debouncedSave !== 'undefined') {
+                debouncedSave(profile, '选项排序');
+            }
+
+            // 重新渲染以反映新顺序
+            if (typeof AppState !== 'undefined' && AppState.refreshTable) {
+                AppState.refreshTable();
+            }
+
+            self._endRowDrag();
+        });
+
+        tbody.addEventListener('dragend', () => {
+            self._endRowDrag();
+        });
+    },
+
+    _endRowDrag() {
+        if (this._dragRowData && this._dragRowData.el) {
+            this._dragRowData.el.classList.remove('row-dragging');
+        }
+        this._dragRowData = null;
     }
 };

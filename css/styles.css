@@ -202,11 +202,50 @@ body {
 }
 .menu-item:hover { background: var(--bg-hover); }
 .menu-item.active { background: var(--bg-active); color: var(--color-primary); font-weight: 500; }
+.menu-item.menu-dragging { opacity: 0.4; }
+.menu-item.menu-drag-over { background: var(--color-primary); color: #fff; }
 .menu-item.depth-0 { padding-left: 12px; font-weight: 500; }
 .menu-item.depth-1 { padding-left: 24px; }
 .menu-item.depth-2 { padding-left: 36px; }
 .menu-item.depth-3 { padding-left: 48px; }
 .menu-item.depth-4 { padding-left: 60px; }
+
+/* 拖拽手柄 */
+.menu-drag-handle {
+    display: inline-block;
+    width: 14px;
+    margin-right: 4px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    cursor: grab;
+    user-select: none;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.menu-item:hover .menu-drag-handle { opacity: 1; }
+.menu-item.menu-dragging .menu-drag-handle { cursor: grabbing; }
+
+/* 表格行拖拽 */
+.drag-handle-col {
+    display: inline-block;
+    width: 14px;
+    margin-right: 2px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    cursor: grab;
+    user-select: none;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+tr:hover .drag-handle-col { opacity: 1; }
+tr.row-dragging { opacity: 0.4; background: var(--bg-warn-row); }
+tr.row-dragging .drag-handle-col { cursor: grabbing; }
+tr.row-drag-over { background: var(--color-primary); }
+tr.row-drag-over td { color: #fff; }
+tr.row-drag-over .drag-handle-col { color: #fff; opacity: 1; }
+tr.row-drag-over .tag { background: rgba(255,255,255,0.3); }
 
 /* 可折叠菜单 */
 .menu-group { }

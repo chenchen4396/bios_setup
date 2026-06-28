@@ -57,6 +57,7 @@ const MenuTree = {
         }
 
         const allMenus = Object.values(workMap);
+        // 全局按 menuPath 字典序 → 同路径按 displayOrder
         allMenus.sort((a, b) => {
             if (a.menuPath !== b.menuPath) return a.menuPath.localeCompare(b.menuPath);
             return (a.displayOrder || 0) - (b.displayOrder || 0);
@@ -81,6 +82,15 @@ const MenuTree = {
                 rootMenus.push(menu);
             }
         }
+
+        // 每个父节点下按 displayOrder 排序子节点（支持拖拽重排后可恢复自定义顺序）
+        const sortChildren = (menus) => {
+            menus.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            for (const m of menus) {
+                if (m.children && m.children.length > 0) sortChildren(m.children);
+            }
+        };
+        sortChildren(rootMenus);
 
         return rootMenus;
     },

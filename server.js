@@ -118,7 +118,7 @@ function getDemoBuilders() {
     const modelsCode = fs.readFileSync(path.join(__dirname, 'js', 'models.js'), 'utf-8');
     const demoCode = fs.readFileSync(path.join(__dirname, 'js', 'demo-data.js'), 'utf-8');
     const code = modelsCode + '\n' + demoCode +
-        '\nresult = { buildModelProfile, buildAllDemoProfiles, MODEL_2288HV7 };';
+        '\nresult = { buildModelProfile, DEMO_MODEL };';
 
     const sandbox = { console, require, result: null };
     vm.createContext(sandbox);
@@ -186,10 +186,10 @@ app.delete('/api/systems/:id', (req, res) => {
     res.json({ success: true });
 });
 
-/** 一键加载演示数据 (仅 2288H V7) */
+/** 一键加载演示数据 */
 app.post('/api/demo/load', (req, res) => {
     try {
-        const { buildModelProfile, MODEL_2288HV7: model } = getDemoBuilders();
+        const { buildModelProfile, DEMO_MODEL: model } = getDemoBuilders();
         if (!buildModelProfile || !model) {
             return res.status(500).json({ error: '无法加载演示数据构建函数' });
         }
@@ -202,30 +202,6 @@ app.post('/api/demo/load', (req, res) => {
         res.json({ success: true, loaded: 1, loadedName: profile.productName, loadedId: profile.systemId });
     } catch (e) {
         console.error('[Demo] 演示数据加载失败:', e);
-        res.status(500).json({ error: e.message });
-    }
-});
-
-/** 加载全部机型 (5 个) */
-app.post('/api/models/load-all', (req, res) => {
-    try {
-        const { buildAllDemoProfiles } = getDemoBuilders();
-        if (!buildAllDemoProfiles) return res.status(500).json({ error: '无法加载数据构建函数' });
-
-        const allProfiles = buildAllDemoProfiles();
-        if (!allProfiles || !allProfiles.length) return res.status(500).json({ error: '数据生成失败' });
-
-        const loadedIds = [];
-        for (const profile of allProfiles) {
-            profile._version = 1;
-            saveProfile(profile.systemId, profile);
-            updateIndexEntry(profile.systemId, profile);
-            loadedIds.push(profile.systemId);
-        }
-
-        res.json({ success: true, loaded: loadedIds.length, systems: loadedIds });
-    } catch (e) {
-        console.error('[Demo] 批量加载失败:', e);
         res.status(500).json({ error: e.message });
     }
 });
