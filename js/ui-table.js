@@ -105,38 +105,18 @@ const UITable = {
         emptyEl.classList.add('hidden');
         countEl.textContent = '(' + filtered.length + ' 项)';
 
-        const isBatch = AppState.isBatchEditing;
-
         // 按 displayOrder 排序
         filtered.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0) || a.attributeName.localeCompare(b.attributeName));
 
         let html = '';
         for (const attr of filtered) {
-            html += isBatch
-                ? this.renderBatchEditRow(attr, profile)
-                : this.renderAttributeRow(attr, profile);
-        }
-
-        if (isBatch && filtered.length > 0) {
-            html += '<tr class="batch-edit-footer"><td colspan="12" style="text-align:center;padding:10px;">' +
-                '<button id="btn-batch-apply" class="btn btn-primary" style="padding:6px 24px;font-size:13px;">' +
-                '应用全部修改 (' + filtered.filter(a => !isEffectivelyDisabled(a)).length + ' 项可编辑)</button>' +
-                '</td></tr>';
+            html += this.renderAttributeRow(attr, profile);
         }
 
         tbody.innerHTML = html;
 
-        if (isBatch) {
-            const applyBtn = document.getElementById('btn-batch-apply');
-            if (applyBtn) {
-                applyBtn.addEventListener('click', () => {
-                    if (AppState.confirmBatchEdit) AppState.confirmBatchEdit();
-                });
-            }
-        } else {
-            // 拖拽排序（非批量模式）
-            this._bindRowDragEvents(tbody);
-        }
+        // 拖拽排序
+        this._bindRowDragEvents(tbody);
     },
 
     renderAttributeRow(attr, profile) {
@@ -186,22 +166,22 @@ const UITable = {
         // 操作按钮
         let actionHtml;
         if (attr.immutable || disabled) {
-            actionHtml = '<span style="font-size:11px;color:var(--text-tertiary);">—</span>';
+            actionHtml = '<span class="btn-icon btn-icon-disabled" title="此属性不可编辑">—</span>';
         } else if (attr.type === AttrType.Password) {
-            actionHtml = '<button class="btn btn-small btn-edit" data-attr="' + escA(attr.attributeName) + '">设密码</button>';
+            actionHtml = '<button class="btn-icon" data-attr="' + escA(attr.attributeName) + '" title="设置密码">🔑</button>';
         } else {
-            actionHtml = '<button class="btn btn-small btn-edit" data-attr="' + escA(attr.attributeName) + '">编辑</button>';
-            if (modified) {
-                actionHtml += ' <button class="btn btn-small btn-reset btn-link" data-attr="' + escA(attr.attributeName) + '">还原</button>';
-            }
+            actionHtml = '<button class="btn-icon" data-attr="' + escA(attr.attributeName) + '" title="编辑此属性">✎</button>';
+        }
+        if (!attr.immutable && !disabled && modified) {
+            actionHtml += ' <button class="btn-icon btn-icon-danger btn-reset" data-attr="' + escA(attr.attributeName) + '" title="还原到默认值">↺</button>';
         }
 
         const attrTitle = escA(helpEn);
         const order = attr.displayOrder ?? 0;
 
         return '<tr class="' + rowClass.trim() + '" data-attr="' + escA(attr.attributeName) + '"' +
-            ' data-menu="' + escA(menuPath || '') + '" data-order="' + order + '" draggable="true">' +
-            '<td><span class="drag-handle-col" title="拖拽排序">⋮⋮</span><span class="attr-value-cell" style="font-size:10px;color:var(--text-secondary);" title="' + escA(menuPath) + '">' + escH(menuPath) + '</span></td>' +
+            ' data-menu="' + escA(menuPath || '') + '" data-order="' + order + '">' +
+            '<td><span class="drag-handle-col" title="拖拽排序" draggable="true">⋮⋮</span><span class="attr-value-cell" style="font-size:10px;color:var(--text-secondary);" title="' + escA(menuPath) + '">' + escH(menuPath) + '</span></td>' +
             '<td><span class="attr-name-cell" title="' + attrTitle + '">' + escH(attr.attributeName) + '</span></td>' +
             '<td><span title="' + attrTitle + '">' + escH(displayNameEn) + '</span></td>' +
             '<td><span style="color:var(--text-secondary);">' + (displayNameZh ? escH(displayNameZh) : '<span style="color:var(--text-tertiary);">—</span>') + '</span></td>' +
@@ -218,78 +198,6 @@ const UITable = {
                 (!helpEn && !helpZh ? '<span style="color:var(--text-tertiary);font-size:11px;">—</span>' : '') +
             '</td>' +
             '<td>' + actionHtml + '</td>' +
-            '</tr>';
-    },
-
-    renderBatchEditRow(attr, profile) {
-        const escH = UICommon.escHtml, escA = UICommon.escAttr;
-        const disabled = isEffectivelyDisabled(attr);
-        const grayed = isEffectivelyGrayedOut(attr);
-        const readonly = isEffectivelyReadOnly(attr);
-        const modified = hasPendingChanges(attr);
-
-        let rowClass = '';
-        if (grayed) rowClass += ' row-grayout';
-        if (attr.immutable) rowClass += ' row-immutable';
-        if (modified) rowClass += ' row-modified';
-        if (readonly) rowClass += ' row-readonly';
-        if (attr.attributeScope === 'Custom') rowClass += ' row-custom';
-
-        const displayNameEn = attr.displayName || attr.attributeName;
-        const displayNameZh = attr.displayNameZh || '';
-        const defaultVal = attr.defaultValue !== null && attr.defaultValue !== undefined ? attr.defaultValue : '(空)';
-        const optionsStr = formatAvailableValues(attr);
-        const helpEn = attr.helpText || '';
-        const helpZh = attr.helpTextZh || '';
-        const menuPath = attr.menuPath || '';
-        const editId = 'batchedit_' + attr.attributeName.replace(/[^a-zA-Z0-9]/g, '_');
-
-        let readonlyHtml;
-        if (attr.immutable) {
-            readonlyHtml = '<span class="status-badge status-immutable">不可变</span>';
-        } else if (readonly) {
-            readonlyHtml = '<span class="status-badge status-readonly">只读</span>';
-        } else if (attr.resetRequired) {
-            readonlyHtml = '<span class="status-badge" style="color:var(--color-warning);">需重启</span>';
-        } else {
-            readonlyHtml = '<span class="status-badge status-editable">可编辑</span>';
-        }
-
-        const scopeDisplay = getScopeDisplay(attr.attributeScope);
-
-        const redfishHtml = attr.supportsRedfish
-            ? '<span style="color:var(--color-success);font-weight:500;">是</span>'
-            : '<span style="color:var(--text-tertiary);font-weight:500;">否</span>';
-
-        let platformStr = attr.platforms && attr.platforms.length > 0
-            ? attr.platforms.join(', ')
-            : '全部';
-
-        // 可编辑 → 内联编辑器；不可编辑 → 只读显示
-        let valueCellHtml;
-        if (attr.immutable || disabled) {
-            valueCellHtml = '<span class="attr-value-cell" style="color:var(--text-tertiary);">' + escH(String(defaultVal)) + '</span>';
-        } else {
-            valueCellHtml = Editors.renderEditor(attr, editId);
-        }
-
-        return '<tr class="' + rowClass.trim() + '" data-attr="' + escA(attr.attributeName) + '" data-batch="1">' +
-            '<td><span class="attr-value-cell" style="font-size:10px;color:var(--text-secondary);">' + escH(menuPath) + '</span></td>' +
-            '<td><span class="attr-name-cell">' + escH(attr.attributeName) + '</span></td>' +
-            '<td>' + escH(displayNameEn) + '</td>' +
-            '<td>' + (displayNameZh ? escH(displayNameZh) : '<span style="color:var(--text-tertiary);">—</span>') + '</td>' +
-            '<td>' + valueCellHtml + '</td>' +
-            '<td>' + escH(optionsStr) + '</td>' +
-            '<td><span class="tag ' + scopeDisplay.cls + '">' + scopeDisplay.text + '</span></td>' +
-            '<td>' + redfishHtml + '</td>' +
-            '<td>' + escH(platformStr) + '</td>' +
-            '<td class="col-desc">' +
-                (helpEn ? '<span class="help-cell">' + escH(helpEn) + '</span>' : '') +
-                (helpEn && helpZh ? '<br>' : '') +
-                (helpZh ? '<span class="help-cell help-zh">' + escH(helpZh) + '</span>' : '') +
-                (!helpEn && !helpZh ? '<span style="color:var(--text-tertiary);font-size:11px;">—</span>' : '') +
-            '</td>' +
-            '<td><span style="font-size:11px;color:var(--text-secondary);">批量</span></td>' +
             '</tr>';
     },
 
@@ -350,8 +258,9 @@ const UITable = {
         const self = this;
 
         tbody.addEventListener('dragstart', (e) => {
+            // 仅从拖拽手柄 span 触发（draggable 在手柄上，不在 tr 上）
             const row = e.target.closest('tr[data-attr]');
-            if (!row || !row.dataset.attr || row.dataset.batch === '1') return;
+            if (!row || !row.dataset.attr || row.dataset.batch === '1') { e.preventDefault(); return; }
 
             self._dragRowData = {
                 attrName: row.dataset.attr,

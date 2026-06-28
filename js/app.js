@@ -38,7 +38,6 @@ const AppState = {
     currentProfile: null,
     activeMenu: null,
     searchKeyword: '',
-    isBatchEditing: false,
     modifiedAttrs: new Set(),
     loadedSystems: [],
 
@@ -61,16 +60,54 @@ const AppState = {
     },
 
     bindEvents() {
-        const on = (id, event, handler) => {
-            const el = $id(id);
-            if (el) el.addEventListener(event, handler);
-        };
+        // ====== 下拉菜单开关 ======
+        document.addEventListener('click', (e) => {
+            // 关闭所有下拉
+            document.querySelectorAll('.dropdown.active').forEach(d => {
+                if (!d.contains(e.target)) d.classList.remove('active');
+            });
+        });
 
-        // 工具栏
-        on('btn-import', 'click', () => this.handleImport());
-        on('btn-export', 'click', () => this.handleExport());
-        on('btn-save', 'click', () => this.saveCurrentChanges());
-        on('btn-load-demo', 'click', () => this.loadDemoData());
+        const setupDropdown = (btnId) => {
+            const btn = $id(btnId);
+            if (!btn) return;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const dropdown = btn.closest('.dropdown');
+                if (dropdown) {
+                    const wasActive = dropdown.classList.contains('active');
+                    // 关闭所有下拉
+                    document.querySelectorAll('.dropdown.active').forEach(d => d.classList.remove('active'));
+                    if (!wasActive) dropdown.classList.add('active');
+                }
+            });
+        };
+        setupDropdown('btn-data-menu');
+        setupDropdown('btn-actions-menu');
+        setupDropdown('btn-system-more');
+
+        // ====== 下拉菜单项 (data-action 分派) ======
+        document.addEventListener('click', (e) => {
+            const item = e.target.closest('.dropdown-item');
+            if (!item) return;
+            const action = item.dataset.action;
+            if (!action) return;
+
+            // 关闭所有下拉
+            document.querySelectorAll('.dropdown.active').forEach(d => d.classList.remove('active'));
+
+            switch (action) {
+                case 'import':       this.handleImport(); break;
+                case 'load-demo':    this.loadDemoData(); break;
+                case 'export-excel': this.exportFormat('excel'); break;
+                case 'export-json':  this.exportFormat('json'); break;
+                case 'add-attr':     this.handleAddAttribute(); break;
+                case 'delete-system': this.deleteCurrentSystem(); break;
+            }
+        });
+
+        // ====== 工具栏 ======
+        const on = (id, evt, handler) => { const el = $id(id); if (el) el.addEventListener(evt, handler); };
 
         // 搜索
         const searchInput = $id('search-input');
@@ -90,18 +127,7 @@ const AppState = {
             if (id) await this.switchSystem(id);
         });
 
-        // 删除机型
-        on('btn-delete-system', 'click', () => {
-            if (!this.currentProfile) return;
-            const name = this.currentProfile.productName || this.currentProfile.systemId;
-            UIRenderer.showModal(
-                '确认删除',
-                '<p>确定要删除机型 <strong>' + UIRenderer.escHtml(name) + '</strong> 的所有数据吗？此操作不可恢复。</p>',
-                async () => { await Storage.deleteSystem(this.currentSystemId); this.refreshAfterDelete(); }
-            );
-        });
-
-        // 筛选栏（多字段，输入实时筛选）
+        // 筛选栏
         const filterIds = ['filter-attr', 'filter-type', 'filter-scope', 'filter-platform', 'filter-readonly', 'filter-redfish'];
         for (const id of filterIds) {
             const el = $id(id);
@@ -110,28 +136,20 @@ const AppState = {
         }
         on('btn-clear-filter', 'click', () => this.clearFilters());
 
-        // 批量编辑
-        on('btn-batch-edit', 'click', () => this.toggleBatchEdit());
-
-        // 清除搜索
-        on('btn-clear-search', 'click', () => this.clearSearch());
-
-        // 手动添加（事件委托：使用父容器避免 renderSidebar 替换后丢失监听）
+        // 手动添加菜单（事件委托）
         const menuTree = $id('menu-tree');
         if (menuTree) {
             menuTree.addEventListener('click', (e) => {
                 if (e.target.closest('#btn-add-menu')) this.handleAddMenu();
             });
-            on('btn-add-menu', 'click', () => this.handleAddMenu()); // 兼容初始绑定
+            on('btn-add-menu', 'click', () => this.handleAddMenu());
         }
-
-        on('btn-add-attr', 'click', () => this.handleAddAttribute());
 
         // 内容区事件委托（编辑、还原按钮）
         const tbody = $id('attribute-tbody');
         if (tbody) {
             tbody.addEventListener('click', (e) => {
-                const btn = e.target.closest('.btn-edit');
+                const btn = e.target.closest('button[data-attr]:not(.btn-reset):not(.btn-icon-disabled)');
                 if (btn) {
                     this.startEdit(btn.dataset.attr);
                     return;
@@ -145,7 +163,7 @@ const AppState = {
 
         // 键盘快捷键
         document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 's') { e.preventDefault(); this.saveCurrentChanges(); }
+            if (e.ctrlKey && e.key === 's') { e.preventDefault(); UIRenderer.showNotification('修改已自动保存', 'info', 2000); }
             if (e.ctrlKey && e.key === 'f') { e.preventDefault(); $id('search-input')?.focus(); }
             if (e.key === 'Escape') { this.cancelAllEdits(); UIRenderer.hideModal(); }
         });
@@ -298,40 +316,36 @@ const AppState = {
         UIRenderer.showNotification(msg, 'success', 4000);
     },
 
-    handleExport() {
+    /** 按格式导出（下拉菜单直调） */
+    exportFormat(format) {
         if (!this.currentProfile) {
             UIRenderer.showNotification('请先导入或选择机型', 'warn');
             return;
         }
+        try {
+            if (format === 'json') {
+                Exporter.exportToRegistryJSON(this.currentProfile);
+                UIRenderer.showNotification('Registry JSON 导出成功', 'success');
+            } else {
+                Exporter.exportToExcel(this.currentProfile);
+                UIRenderer.showNotification('Excel 导出成功', 'success');
+            }
+        } catch (err) {
+            UIRenderer.showNotification('导出失败: ' + err.message, 'error');
+        }
+    },
 
+    /** 删除当前机型（从 ⋮ 菜单触发，需确认） */
+    deleteCurrentSystem() {
+        if (!this.currentProfile) return;
+        const name = this.currentProfile.productName || this.currentProfile.systemId;
         UIRenderer.showModal(
-            '选择导出格式',
-            '<div class="form-group">' +
-            '<p style="margin-bottom:12px;">请选择导出格式：</p>' +
-            '<div class="form-group-inline" style="margin-bottom:8px;">' +
-            '  <input type="radio" name="export-format" id="export-excel" value="excel" checked />' +
-            '  <label for="export-excel" style="cursor:pointer;font-size:13px;">Excel (.xlsx) — 含中文列名，适合审阅</label>' +
-            '</div>' +
-            '<div class="form-group-inline">' +
-            '  <input type="radio" name="export-format" id="export-json" value="json" />' +
-            '  <label for="export-json" style="cursor:pointer;font-size:13px;">Registry JSON (.json) — DMTF 标准，可重新导入</label>' +
-            '</div>' +
-            '</div>',
-            () => {
-                const format = document.querySelector('input[name="export-format"]:checked')?.value || 'excel';
-                try {
-                    if (format === 'json') {
-                        Exporter.exportToRegistryJSON(this.currentProfile);
-                        UIRenderer.showNotification('Registry JSON 导出成功', 'success');
-                    } else {
-                        Exporter.exportToExcel(this.currentProfile);
-                        UIRenderer.showNotification('Excel 导出成功', 'success');
-                    }
-                } catch (err) {
-                    UIRenderer.showNotification('导出失败: ' + err.message, 'error');
-                }
-            },
-            null
+            '确认删除',
+            '<p>确定要删除机型 <strong>' + UICommon.escHtml(name) + '</strong> 的所有数据吗？此操作不可恢复。</p>',
+            async () => {
+                await Storage.deleteSystem(this.currentSystemId);
+                this.refreshAfterDelete();
+            }
         );
     },
 
@@ -526,61 +540,6 @@ const AppState = {
         UIRenderer.showNotification('已还原: ' + attrName, 'info');
     },
 
-    toggleBatchEdit() {
-        this.isBatchEditing = !this.isBatchEditing;
-        const btn = $id('btn-batch-edit');
-        const addBtn = $id('btn-add-attr');
-
-        btn.textContent = this.isBatchEditing ? '退出批量编辑' : '批量编辑';
-        if (this.isBatchEditing) {
-            btn.classList.add('btn-primary');
-            if (addBtn) addBtn.classList.add('hidden'); // 批量模式下隐藏单个添加
-        } else {
-            btn.classList.remove('btn-primary');
-            if (addBtn) addBtn.classList.remove('hidden');
-        }
-        this.refreshTable();
-    },
-
-    confirmBatchEdit() {
-        if (!this.currentProfile) return;
-
-        let appliedCount = 0;
-        const rows = document.querySelectorAll('#attribute-tbody tr[data-batch="1"]');
-
-        for (const row of rows) {
-            const attrName = row.dataset.attr;
-            const attr = this.currentProfile.attrMap[attrName];
-            if (!attr || isEffectivelyDisabled(attr)) continue;
-
-            const editId = 'batchedit_' + attrName.replace(/[^a-zA-Z0-9]/g, '_');
-            const editorEl = document.getElementById(editId);
-            if (!editorEl) continue;
-
-            const newValue = Editors.extractValue(editorEl, attr.type);
-            const validation = Editors.validate(newValue, attr);
-
-            if (!validation.valid) {
-                editorEl.classList.add('inline-edit-error');
-                UIRenderer.showNotification(attrName + ': ' + validation.message, 'warn', 3000);
-                continue;
-            }
-
-            attr.modifiedValue = newValue;
-            this.modifiedAttrs.add(attrName);
-            DependencyEngine.evaluate(this.currentProfile, attrName, newValue);
-            appliedCount++;
-        }
-
-        if (appliedCount > 0) {
-            this.updateModifiedCount();
-            this.refreshTable();
-            debouncedSave(this.currentProfile, '批量编辑');
-            UIRenderer.showNotification('批量应用了 ' + appliedCount + ' 项修改', 'success');
-        } else {
-            UIRenderer.showNotification('没有有效的修改需要应用', 'info');
-        }
-    },
 
     /* ============ 搜索与筛选 ============ */
 
@@ -697,12 +656,15 @@ const AppState = {
         if (empty) empty.classList.remove('hidden');
         if (pathEl) pathEl.textContent = 'BIOS 选项管理器';
         if (countEl) countEl.textContent = '';
-        if (modifiedEl) modifiedEl.textContent = '已修改: 0 项';
+        if (modifiedEl) { modifiedEl.textContent = '未修改'; modifiedEl.className = ''; }
     },
 
     updateModifiedCount() {
         const el = $id('modified-count');
-        if (el) el.textContent = '已修改: ' + this.modifiedAttrs.size + ' 项';
+        if (!el) return;
+        const count = this.modifiedAttrs.size;
+        el.textContent = count > 0 ? '已修改 ' + count + ' 项' : '未修改';
+        el.className = count > 0 ? 'has-changes' : '';
     },
 
     renderSystemSelector() {
@@ -765,6 +727,7 @@ const AppState = {
         return true;
     },
 
+    /** 复制属性：打开添加弹窗并预填源属性的值 */
     handleAddAttribute() {
         if (!this.currentProfile) {
             UIRenderer.showNotification('请先导入或选择机型', 'warn');

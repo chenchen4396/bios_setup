@@ -62,36 +62,38 @@ const UISidebar = {
                 const order = menu.displayOrder ?? idx;
 
                 // 拖拽手柄
-                const dragHandle = '<span class="menu-drag-handle" title="拖拽排序">⋮⋮</span>';
+                const dragHandle = '<span class="menu-drag-handle" title="拖拽排序" draggable="true">⋮⋮</span>';
 
                 if (hasChildren) {
                     const arrow = isExpanded ? '▼' : '▶';
                     html += '<div class="menu-group" data-menu-group="' + escA(menu.menuPath) + '">' +
-                        '<button class="menu-item menu-has-children' + (active ? ' active' : '') +
+                        '<div class="menu-item menu-has-children' + (active ? ' active' : '') +
                             ' depth-' + depth +
-                            '" data-menu="' + escA(menu.menuPath) +
+                            '" tabindex="0" role="button"' +
+                            ' data-menu="' + escA(menu.menuPath) +
                             '" data-menu-name="' + escA(menu.menuName) +
                             '" data-parent="' + escA(parentKey) +
                             '" data-order="' + order +
                             '" data-depth="' + depth +
                             '" data-expandkey="' + expandKey +
-                            '" draggable="true" title="' + escA(name) + '">' +
+                            '" title="' + escA(name) + '">' +
                         dragHandle +
                         '<span class="menu-arrow">' + arrow + '</span>' +
-                        escH(name) + '</button>' +
+                        escH(name) + '</div>' +
                         '<div class="menu-children' + (isExpanded ? '' : ' menu-collapsed') + '" data-drop-zone="' + escA(menu.menuPath) + '">';
                     renderMenu(menu.children, depth + 1, menu.menuPath);
                     html += '</div></div>';
                 } else {
-                    html += '<button class="menu-item' + (active ? ' active' : '') +
+                    html += '<div class="menu-item' + (active ? ' active' : '') +
                         ' depth-' + depth +
-                        '" data-menu="' + escA(menu.menuPath) +
+                        '" tabindex="0" role="button"' +
+                        ' data-menu="' + escA(menu.menuPath) +
                         '" data-menu-name="' + escA(menu.menuName) +
                         '" data-parent="' + escA(parentKey) +
                         '" data-order="' + order +
                         '" data-depth="' + depth +
-                        '" draggable="true" title="' + escA(name) + '">' +
-                        dragHandle + escH(name) + '</button>';
+                        '" title="' + escA(name) + '">' +
+                        dragHandle + escH(name) + '</div>';
                 }
             }
         };
@@ -139,11 +141,11 @@ const UISidebar = {
     _bindDragEvents(treeEl) {
         const self = this;
 
-        // dragstart — 记录被拖拽菜单
+        // dragstart — 仅从手柄 span 触发（draggable 在手柄上）
         treeEl.addEventListener('dragstart', (e) => {
             const item = e.target.closest('.menu-item');
-            if (!item || !item.dataset.menu || item.dataset.menu === '') return;
-            if (item.dataset.parent === undefined) return;
+            if (!item || !item.dataset.menu || item.dataset.menu === '') { e.preventDefault(); return; }
+            if (item.dataset.parent === undefined) { e.preventDefault(); return; }
 
             self._dragData = {
                 menuPath: item.dataset.menu,
