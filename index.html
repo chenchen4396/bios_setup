@@ -22,93 +22,147 @@
                     <div class="dropdown-divider"></div>
                     <button class="dropdown-item" data-action="export-excel">📥 导出 Excel</button>
                     <button class="dropdown-item" data-action="export-json">📄 导出 JSON</button>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item" data-action="export-template">📋 导出实例模板</button>
                 </div>
             </div>
             <!-- 操作下拉 -->
             <div id="dropdown-actions" class="dropdown">
                 <button id="btn-actions-menu" class="btn btn-secondary dropdown-toggle">操作</button>
                 <div class="dropdown-menu">
-                    <button class="dropdown-item" data-action="add-attr">➕ 添加选项</button>
+                    <button class="dropdown-item" data-action="open-system-manager">📋 机型管理</button>
                 </div>
             </div>
         </div>
         <div id="toolbar-center">
-            <input id="search-input" type="text" placeholder="搜索属性名称、描述…" />
+            <div id="search-wrapper">
+                <input id="search-input" type="text" placeholder="搜索属性名称、描述…" />
+                <button id="btn-clear-search" class="hidden" title="清除搜索">×</button>
+            </div>
         </div>
         <div id="toolbar-right">
             <span id="modified-count">未修改</span>
+            <div id="toolbar-user">
+                <div id="dropdown-user" class="dropdown">
+                    <button id="btn-login" class="btn btn-small btn-secondary" title="登录">🔒 登录</button>
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item" data-action="logout">🚪 退出登录</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
     <!-- 主体 -->
     <div id="main-container">
-        <!-- 侧边栏 -->
-        <aside id="sidebar">
-            <div id="system-selector">
-                <select id="select-system">
-                    <option value="">-- 选择机型 --</option>
-                </select>
-                <div id="dropdown-system-more" class="dropdown right">
-                    <button id="btn-system-more" title="更多操作">⋮</button>
-                    <div class="dropdown-menu">
-                        <button class="dropdown-item danger" data-action="delete-system">🗑 删除当前机型</button>
+        <!-- 首页视图 -->
+        <div id="homepage" class="hidden">
+            <div class="homepage-header">
+                <div class="homepage-header-bg"></div>
+                <div class="homepage-header-content">
+                    <h2>BIOS 选项管理器</h2>
+                    <p>Redfish AttributeRegistry 多机型配置管理平台</p>
+                    <div class="homepage-actions">
+                        <button class="btn btn-primary btn-homepage-action" onclick="AppState.handleImport()">📂 导入配置</button>
+                        <button class="btn btn-secondary btn-homepage-action" onclick="AppState.loadDemoData()">📋 加载示例</button>
                     </div>
                 </div>
             </div>
-            <nav id="menu-tree">
-                <div class="menu-label-row">
-                    <span class="menu-label">菜单导航</span>
-                    <button id="btn-add-menu" title="添加自定义菜单">+</button>
-                </div>
-            </nav>
-        </aside>
+            <div class="homepage-toolbar">
+                <span class="homepage-count" id="homepage-count"></span>
+            </div>
+            <div id="system-cards" class="system-cards"></div>
+        </div>
 
-        <!-- 内容 -->
-        <section id="content">
-            <div id="content-header">
-                <div>
-                    <span id="current-menu-path">所有属性</span>
-                    <span id="result-count"></span>
+        <!-- 机型详情视图 -->
+        <div id="detail-view" class="hidden">
+            <!-- 侧边栏 -->
+            <aside id="sidebar">
+                <div id="system-selector">
+                    <button id="btn-back-home" class="btn btn-small" title="返回首页">← 首页</button>
+                    <span id="current-system-name" class="current-system-name">-- 选择机型 --</span>
+                    <div id="dropdown-system-more" class="dropdown right">
+                        <button id="btn-system-more" title="更多操作">⋮</button>
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item danger" data-action="delete-system">🗑 删除当前机型</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <!-- 筛选栏 -->
-            <div id="filter-bar">
-                <input id="filter-attr" type="text" placeholder="属性标识..." title="属性标识筛选" />
-                <select id="filter-type"><option value="">全部类型</option><option value="Enumeration">枚举</option><option value="String">字符串</option><option value="Integer">整数</option><option value="Boolean">布尔</option><option value="Password">密码</option></select>
-                <select id="filter-scope"><option value="">全部来源</option></select>
-                <select id="filter-platform"><option value="">全部平台</option></select>
-                <select id="filter-readonly"><option value="">是否只读</option><option value="1">是</option><option value="0">否</option></select>
-                <select id="filter-redfish"><option value="">是否支持Redfish</option><option value="1">是</option><option value="0">否</option></select>
-                <button id="btn-clear-filter" class="btn btn-small" title="清除所有筛选">清除筛选</button>
-            </div>
-            <div id="active-filters"></div>
-            <div id="attribute-table-container">
-                <table id="attribute-table">
-                    <thead>
-                        <tr>
-                            <th>菜单路径</th>
-                            <th>属性标识</th>
-                            <th>显示名称</th>
-                            <th>中文名称</th>
-                            <th>默认值</th>
-                            <th>可选值</th>
-                            <th>来源</th>
-                            <th>支持Redfish</th>
-                            <th>只读</th>
-                            <th>平台</th>
-                            <th>说明</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attribute-tbody"></tbody>
-                </table>
-                <div id="empty-state" class="hidden">
-                    <div class="empty-icon">📋</div>
-                    <p>请导入 BIOS 配置文件或加载示例数据</p>
-                    <p style="font-size:12px;">支持 .json / .json.gz / .xlsx 格式</p>
+                <!-- 版本管理面板 -->
+                <div id="version-panel">
+                    <div class="version-panel-header">
+                        <span class="version-label">版本管理</span>
+                        <button id="btn-save-version" class="btn btn-small btn-primary" title="保存为新版本">💾 保存版本</button>
+                    </div>
+                    <div id="version-list" class="version-list">
+                        <div class="version-empty">暂无保存的版本</div>
+                    </div>
                 </div>
-            </div>
-        </section>
+                <nav id="menu-tree">
+                    <div class="menu-label-row">
+                        <span class="menu-label">菜单导航</span>
+                        <button id="btn-add-menu" title="添加自定义菜单">+</button>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- 内容 -->
+            <section id="content">
+                <div id="content-header">
+                    <div>
+                        <span id="current-menu-path">所有属性</span>
+                        <span id="result-count"></span>
+                    </div>
+                    <div id="content-header-actions">
+                        <button id="btn-column-settings" class="btn btn-secondary btn-small" title="列设置">⚙ 列设置</button>
+                        <button id="btn-add-attr" class="btn btn-primary btn-small">＋ 添加选项</button>
+                    </div>
+                </div>
+                <!-- 筛选栏 -->
+                <div id="filter-bar">
+                    <input id="filter-attr" type="text" placeholder="属性标识..." title="属性标识筛选" />
+                    <select id="filter-type"><option value="">全部类型</option><option value="Enumeration">枚举</option><option value="String">字符串</option><option value="Integer">整数</option><option value="Boolean">布尔</option><option value="Password">密码</option></select>
+                    <select id="filter-scope"><option value="">全部适用客户</option></select>
+                    <select id="filter-platform"><option value="">全部平台</option></select>
+                    <select id="filter-readonly"><option value="">是否只读</option><option value="1">是</option><option value="0">否</option></select>
+                    <select id="filter-redfish"><option value="">是否支持Redfish</option><option value="1">是</option><option value="0">否</option></select>
+                    <button id="btn-clear-filter" class="btn btn-small" title="清除所有筛选">清除筛选</button>
+                </div>
+                <div id="active-filters"></div>
+                <div id="attribute-table-container">
+                    <table id="attribute-table">
+                        <colgroup id="attribute-table-colgroup">
+                            <col><col><col><col><col><col>
+                            <col><col><col><col><col><col>
+                            <col>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>菜单路径</th>
+                                <th>属性标识</th>
+                                <th>显示名称</th>
+                                <th>中文名称</th>
+                                <th>默认值</th>
+                                <th>可选值</th>
+                                <th>适用客户</th>
+                                <th title="支持Redfish">Redfish</th>
+                                <th title="支持Unicfg">Unicfg</th>
+                                <th>只读</th>
+                                <th>平台</th>
+                                <th>说明</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attribute-tbody"></tbody>
+                    </table>
+                    <div id="empty-state" class="hidden">
+                        <div class="empty-icon">📋</div>
+                        <p>请导入 BIOS 配置文件或加载示例数据</p>
+                        <p style="font-size:12px;">支持 .json / .json.gz / .xlsx 格式</p>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 
     <!-- 模态框 -->
@@ -130,9 +184,9 @@
     <div id="notification-container"></div>
 </div>
 
-<!-- CDN -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<!-- 本地库文件 -->
+<script src="js/xlsx.full.min.js"></script>
+<script src="js/pako.min.js"></script>
 
 <!-- 应用模块 -->
 <script src="js/models.js"></script>
@@ -147,6 +201,8 @@
 <script src="js/ui-forms.js"></script>
 <script src="js/ui-renderer.js"></script>
 <script src="js/export.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/system-manager.js"></script>
 <script src="js/demo-data.js"></script>
 <script src="js/app.js"></script>
 

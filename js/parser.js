@@ -33,22 +33,36 @@ const Parser = {
             text = await file.text();
         }
 
-        const json = JSON.parse(text);
+        // 解析 JSON — BMC 导出的 JSON 可能含字符串内未转义的控制字符
+        let json;
+        try {
+            json = JSON.parse(text);
+        } catch (e) {
+            // 修复: 将 JSON 字符串内的裸控制字符替换为空格
+            const cleaned = cleanJsonControlChars(text);
+            json = JSON.parse(cleaned);
+        }
         return this.parseRegistryJSON(json);
     },
 
-    /** @param {Object} json - Registry JSON */
+    /** @param {Object} json - Registry JSON (支持两种格式) */
     parseRegistryJSON(json) {
         const errors = [];
-        const supportedSys = (json.SupportedSystems || [])[0] || {};
+
+        // === 格式兼容 ===
+        // 格式 A: { SupportedSystems, Menus, Attributes, Dependencies }  — 旧版/自行导出
+        // 格式 B: { RegistryEntries: { Attributes, Menus?, Dependencies? } }  — BMC 标准导出
+        const entries = json.RegistryEntries || json;
+        const supportedSys = (json.SupportedSystems || entries.SupportedSystems || [])[0] || {};
+
         const profile = createSystemProfile(
-            supportedSys.ProductName || supportedSys.productName || json.Name || '',
-            supportedSys.SystemId || supportedSys.systemId || json.Id || '',
-            supportedSys.FirmwareVersion || supportedSys.firmwareVersion || ''
+            supportedSys.ProductName || supportedSys.productName || json.Name || entries.Name || json.OwningEntity || '',
+            supportedSys.SystemId || supportedSys.systemId || json.Id || entries.Id || '',
+            supportedSys.FirmwareVersion || supportedSys.firmwareVersion || json.RegistryVersion || entries.RegistryVersion || ''
         );
 
-        // 解析 Menus
-        const menus = json.Menus || json.menus || [];
+        // 解析 Menus (格式 A/B)
+        const menus = entries.Menus || json.Menus || json.menus || [];
         for (const m of menus) {
             const menu = createMenu(m);
             if (!menu.menuName) {
@@ -58,24 +72,42 @@ const Parser = {
             profile.menuMap[menu.menuName] = menu;
         }
 
-        // 解析 Attributes
-        const attrs = json.Attributes || json.attributes || [];
+        // 解析 Attributes (格式 A/B)
+        const attrs = entries.Attributes || json.Attributes || json.attributes || [];
+        const attrMenuPaths = new Set();
         for (const a of attrs) {
             const attr = createAttribute(a);
             if (!attr.attributeName) {
                 errors.push('属性缺少 AttributeName，已跳过');
                 continue;
             }
-            // Registry JSON 中默认没有中文信息
             attr.displayNameZh = '';
             attr.helpTextZh = '';
             profile.attrMap[attr.attributeName] = attr;
+            attrMenuPaths.add(attr.menuPath);
         }
 
-        // 解析 Dependencies
-        const deps = json.Dependencies || json.dependencies || [];
+        // 如果没有显式定义菜单，从属性路径自动推导
+        if (menus.length === 0 && attrMenuPaths.size > 0) {
+            const existingPaths = new Set(Object.values(profile.menuMap).map(m => m.menuPath));
+            for (const path of attrMenuPaths) {
+                if (existingPaths.has(path)) continue;
+                const parts = path.replace('./', '').split('/').filter(Boolean);
+                const lastName = parts[parts.length - 1] || path;
+                const menu = createMenu({
+                    MenuName: path.replace(/[.\/]/g, '_').replace(/^_+/, ''),
+                    DisplayName: lastName,
+                    MenuPath: path,
+                    source: MenuSource.Redfish
+                });
+                profile.menuMap[menu.menuName] = menu;
+                existingPaths.add(path);
+            }
+        }
+
+        // 解析 Dependencies (格式 A/B)
+        const deps = entries.Dependencies || json.Dependencies || json.dependencies || [];
         for (const dep of deps) {
-            // Redfish format: {DependencyFor, Type, Dependency: {MapFrom:[], MapToAttribute, MapToProperty, MapToValue}}
             const depData = dep.Dependency || dep.dependency || {};
             const mapFrom = depData.MapFrom || depData.mapFrom || [];
             const dependencyFor = dep.DependencyFor || dep.dependencyFor;
@@ -88,7 +120,6 @@ const Parser = {
             if (!dependencyFor || !mapToProp) continue;
             if (!mapFrom.length) continue;
 
-            // 展开多条件: 每条 MapFrom 生成一个 Dependency，共享同一目标和 MapTerms
             for (const cond of mapFrom) {
                 const d = createDependency({
                     DependencyFor: dependencyFor,
@@ -204,6 +235,7 @@ const Parser = {
                 ResetRequired: this.getCell(row, ['ResetRequired', '需重启', 'resetRequired']),
                 AttributeScope: this.getCell(row, ['AttributeScope', '来源', 'attributeScope', 'I']),
                 SupportsRedfish: this.getCell(row, ['SupportsRedfish', '支持Redfish', 'supportsRedfish']),
+                SupportsUnicfg: this.getCell(row, ['SupportsUnicfg', '支持Unicfg', 'supportsUnicfg']),
                 Platforms: this.getCell(row, ['Platforms', '适用平台', 'platforms', 'K']),
                 Value: this.getCell(row, ['Value', '可选值', 'value', 'F']),
                 LowerBound: this.getCell(row, ['LowerBound', '数值下限', 'lowerBound']),
@@ -334,3 +366,47 @@ const Parser = {
         return null;
     }
 };
+
+/**
+ * 清理 JSON 字符串中的未转义控制字符
+ * BMC 导出的 registry JSON 中，HelpText 等字段可能含有未转义的换行符
+ * 此函数扫描 JSON 文本，将字符串内的控制字符替换为空格
+ */
+function cleanJsonControlChars(text) {
+    let result = '';
+    let inString = false;
+    let escape = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const code = text.charCodeAt(i);
+
+        if (escape) {
+            result += ch;
+            escape = false;
+            continue;
+        }
+
+        if (ch === '\\' && inString) {
+            escape = true;
+            result += ch;
+            continue;
+        }
+
+        if (ch === '"') {
+            inString = !inString;
+            result += ch;
+            continue;
+        }
+
+        // 字符串内遇到控制字符（\t 除外），替换为空格
+        if (inString && code < 0x20 && code !== 0x09) {
+            result += ' ';
+            continue;
+        }
+
+        result += ch;
+    }
+
+    return result;
+}

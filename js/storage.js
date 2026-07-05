@@ -82,30 +82,7 @@ const Storage = {
     /** @param {Object} profile @returns {Promise<void>} */
     async saveSystem(profile) {
         if (this._mode === 'api') {
-            try {
-                const currentVersion = this._versions[profile.systemId] || 0;
-                const res = await fetch('/api/systems/' + encodeURIComponent(profile.systemId), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: formatProfileJSON(profile, currentVersion)
-                });
-                if (res.status === 409) {
-                    // 乐观锁冲突
-                    const err = await res.json();
-                    throw new Error(err.error || '数据已被他人修改，请刷新后重试');
-                }
-                if (!res.ok) {
-                    const err = await res.json();
-                    throw new Error(err.error || '保存失败');
-                }
-                const result = await res.json();
-                this._versions[profile.systemId] = result._version;
-                return;
-            } catch (e) {
-                if (e.message.includes('已被他人修改')) throw e;
-                console.error('[Storage] API saveSystem 失败:', e);
-                throw e;
-            }
+            return await this._saveWithRetry(profile, false);
         }
         // localStorage 模式
         try {
@@ -123,6 +100,54 @@ const Storage = {
             localStorage.setItem(INDEX_KEY, JSON.stringify(index));
         } catch (e) {
             console.error('[Storage] saveSystem 失败:', profile.systemId, e);
+            throw e;
+        }
+    },
+
+    /**
+     * 带重试的 API 保存 — 遇到 409 时自动重载版本并重试一次
+     * @param {Object} profile - 要保存的 Profile
+     * @param {boolean} isRetry - 是否为重试调用
+     */
+    async _saveWithRetry(profile, isRetry) {
+        const id = profile.systemId;
+        const currentVersion = this._versions[id] || 0;
+
+        try {
+            const res = await fetch('/api/systems/' + encodeURIComponent(id), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: formatProfileJSON(profile, currentVersion)
+            });
+
+            if (res.status === 409) {
+                if (isRetry) {
+                    // 重试仍然冲突，放弃并抛出错误
+                    const err = await res.json();
+                    throw new Error(err.error || '数据已被他人修改，请刷新后重试');
+                }
+                // 首次冲突：重载最新版本，同步 profile 的 _version，然后重试
+                console.warn('[Storage] 409 冲突，重载版本后重试:', id);
+                const latest = await this.loadSystem(id);
+                if (latest) {
+                    // 把服务器端最新的 _version 同步到 profile 对象上
+                    profile._version = latest._version;
+                }
+                return await this._saveWithRetry(profile, true);
+            }
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || '保存失败');
+            }
+
+            const result = await res.json();
+            this._versions[id] = result._version;
+            // 同步到 profile 对象，保持版本一致
+            profile._version = result._version;
+        } catch (e) {
+            if (e.message.includes('已被他人修改')) throw e;
+            console.error('[Storage] API saveSystem 失败:', e);
             throw e;
         }
     },
@@ -195,6 +220,88 @@ const Storage = {
             }
         }
         return { count, errors };
+    },
+
+    // ============ 版本管理 ============
+
+    /** 列出机型的所有版本 */
+    async listVersions(systemId) {
+        if (this._mode === 'api') {
+            try {
+                const res = await fetch('/api/systems/' + encodeURIComponent(systemId) + '/versions');
+                if (!res.ok) return [];
+                const data = await res.json();
+                return data.versions || [];
+            } catch (e) {
+                console.error('[Storage] API listVersions 失败:', e);
+                return [];
+            }
+        }
+        return [];
+    },
+
+    /** 保存当前状态为新版本 */
+    async saveVersion(systemId, label) {
+        if (this._mode === 'api') {
+            try {
+                const res = await fetch('/api/systems/' + encodeURIComponent(systemId) + '/versions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || '保存版本失败');
+                }
+                return await res.json();
+            } catch (e) {
+                console.error('[Storage] API saveVersion 失败:', e);
+                throw e;
+            }
+        }
+        throw new Error('版本管理仅支持 API 模式');
+    },
+
+    /** 切换到某个版本 */
+    async activateVersion(systemId, versionId) {
+        if (this._mode === 'api') {
+            try {
+                const res = await fetch('/api/systems/' + encodeURIComponent(systemId) + '/versions/' + encodeURIComponent(versionId) + '/activate', {
+                    method: 'POST'
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || '切换版本失败');
+                }
+                const result = await res.json();
+                this._versions[systemId] = result._version;
+                return result;
+            } catch (e) {
+                console.error('[Storage] API activateVersion 失败:', e);
+                throw e;
+            }
+        }
+        throw new Error('版本管理仅支持 API 模式');
+    },
+
+    /** 删除版本 */
+    async deleteVersion(systemId, versionId) {
+        if (this._mode === 'api') {
+            try {
+                const res = await fetch('/api/systems/' + encodeURIComponent(systemId) + '/versions/' + encodeURIComponent(versionId), {
+                    method: 'DELETE'
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || '删除版本失败');
+                }
+                return await res.json();
+            } catch (e) {
+                console.error('[Storage] API deleteVersion 失败:', e);
+                throw e;
+            }
+        }
+        throw new Error('版本管理仅支持 API 模式');
     }
 };
 

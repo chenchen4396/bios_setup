@@ -135,7 +135,7 @@ const UIForms = {
             '  </div>' +
             '</div>' +
             '<div class="form-group">' +
-            '  <label>属性来源</label>' +
+            '  <label>适用客户</label>' +
             '  <input id="add-attr-scope" type="text" value="通用" list="scope-suggestions" placeholder="通用 / 字节 / 百度..." />' +
             '</div>' +
             '<div class="form-group-inline">' +
@@ -145,6 +145,10 @@ const UIForms = {
             '<div class="form-group-inline">' +
             '  <input type="checkbox" id="add-attr-redfish" />' +
             '  <label style="font-size:12px;cursor:pointer;">支持 Redfish (可通过 Redfish API 管理此选项)</label>' +
+            '</div>' +
+            '<div class="form-group-inline">' +
+            '  <input type="checkbox" id="add-attr-unicfg" />' +
+            '  <label style="font-size:12px;cursor:pointer;">支持 Unicfg</label>' +
             '</div>';
     },
 
@@ -161,6 +165,7 @@ const UIForms = {
         const helpTextZh = document.getElementById('add-attr-helpzh').value.trim();
         const readOnly = document.getElementById('add-attr-readonly').checked;
         const supportsRedfish = document.getElementById('add-attr-redfish').checked;
+        const supportsUnicfg = document.getElementById('add-attr-unicfg').checked;
         const scope = (document.getElementById('add-attr-scope')?.value?.trim()) || '通用';
 
         let lb = null, ub = null, step = null, minlen = null, maxlen = null;
@@ -183,7 +188,7 @@ const UIForms = {
 
         return {
             attrName, type, displayName, displayNameZh, defaultValue,
-            value, menuPath, platforms, helpText, helpTextZh, readOnly, supportsRedfish, scope,
+            value, menuPath, platforms, helpText, helpTextZh, readOnly, supportsRedfish, supportsUnicfg, scope,
             lowerBound: lb ? Number(lb) : null,
             upperBound: ub ? Number(ub) : null,
             scalarIncrement: step ? Number(step) : null,
@@ -290,10 +295,10 @@ const UIForms = {
             '    <input id="edit-attr-platforms" type="text" value="' + escA(platformsVal) + '" placeholder="逗号分隔, 留空=全平台" />' +
             '  </div>' +
             '</div>' +
-            // 来源 + Redfish + 只读
+            // 适用客户 + Redfish + 只读
             '<div class="form-row" style="align-items:center;">' +
             '  <div class="form-group">' +
-            '    <label>属性来源</label>' +
+            '    <label>适用客户</label>' +
             '    <input id="edit-attr-scope" type="text" value="' + escA((attr.attributeScope === 'Standard') ? '通用' : (attr.attributeScope || '通用')) + '" list="scope-suggestions" placeholder="通用 / 字节 / 百度..." />' +
             '    <datalist id="scope-suggestions">' +
             '      <option value="通用"><option value="字节"><option value="百度"><option value="阿里">' +
@@ -305,11 +310,18 @@ const UIForms = {
             '    <label style="font-size:12px;cursor:pointer;">支持 Redfish</label>' +
             '  </div>' +
             '  <div class="form-group-inline" style="flex:1;padding-top:20px;">' +
+            '    <input type="checkbox" id="edit-attr-unicfg"' + (attr.supportsUnicfg ? ' checked' : '') + ' />' +
+            '    <label style="font-size:12px;cursor:pointer;">支持 Unicfg</label>' +
+            '  </div>' +
+            '  <div class="form-group-inline" style="flex:1;padding-top:20px;">' +
             '    <input type="checkbox" id="edit-attr-readonly"' + (attr.readOnly ? ' checked' : '') + ' />' +
             '    <label style="font-size:12px;cursor:pointer;">只读</label>' +
             '  </div>' +
             '</div>' +
             (attr.warningText ? '<div class="form-group"><span style="color:var(--color-warning);font-size:12px;">⚠ ' + escH(attr.warningText) + '</span></div>' : '') +
+            '<div style="border-top:1px solid var(--border-color);padding-top:12px;margin-top:12px;text-align:right;">' +
+            '  <button id="btn-delete-attr" class="btn btn-danger-solid btn-small">🗑 删除此选项</button>' +
+            '</div>' +
             '</div>' +
             '<script>window._toggleEditTypeFields = function(){' +
             'var t=document.getElementById("edit-attr-type").value;' +
@@ -338,6 +350,7 @@ const UIForms = {
         const helpTextZh = getVal('edit-attr-helpzh');
         const readOnly = getBool('edit-attr-readonly');
         const supportsRedfish = getBool('edit-attr-redfish');
+        const supportsUnicfg = getBool('edit-attr-unicfg');
         const attributeScope = getVal('edit-attr-scope') || '通用';
 
         // 枚举值
@@ -380,7 +393,7 @@ const UIForms = {
             menuPath,
             platforms: platformList,
             helpText, helpTextZh,
-            readOnly, supportsRedfish,
+            readOnly, supportsRedfish, supportsUnicfg,
             attributeScope,
             lowerBound, upperBound, scalarIncrement,
             minLength, maxLength

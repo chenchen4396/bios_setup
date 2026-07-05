@@ -54,7 +54,8 @@ function createAttribute(raw) {
         modifiedValue: null,
         attributeScope: raw.AttributeScope || raw.attributeScope || AttrScope.Standard,
         platforms: parsePlatforms(raw.Platforms || raw.platforms),
-        supportsRedfish: toBool(raw.SupportsRedfish ?? raw.supportsRedfish, false), // 是否支持Redfish管理
+        supportsRedfish: toBool(raw.SupportsRedfish ?? raw.supportsRedfish ?? raw.sr, true), // 是否支持Redfish管理（Registry JSON默认为true）
+        supportsUnicfg: toBool(raw.SupportsUnicfg ?? raw.supportsUnicfg, false), // 是否支持Unicfg
         displayName: raw.DisplayName || raw.displayName || '',
         displayNameZh: raw.displayNameZh || '',    // 中文显示名称 (Excel专属)
         helpText: raw.HelpText || raw.helpText || '',
@@ -261,7 +262,7 @@ function getTypeDisplay(type) {
 }
 
 /**
- * 获取属性来源的显示标签
+ * 获取属性适用客户的显示标签
  * "通用" = 蓝色标签，其他 = 橙色自定义标签
  */
 function getScopeDisplay(scope) {

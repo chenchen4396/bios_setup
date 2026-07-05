@@ -47,16 +47,264 @@ const AppState = {
 
         this.loadedSystems = await Storage.listSystems();
 
-        if (this.loadedSystems.length > 0) {
-            const lastId = this.loadedSystems[0].systemId;
-            await this.switchSystem(lastId, true);
-        } else {
-            // 首次使用，自动加载演示数据
-            await this.loadDemoData();
-        }
-
         this.bindEvents();
         this.renderSystemSelector();
+        this.updateUserDisplay();
+
+        // 监听浏览器前进/后退
+        window.addEventListener('popstate', () => this._onPopState());
+
+        // 从 URL hash 恢复状态（支持刷新后保持页面）
+        const hashState = this._parseUrlHash();
+        if (hashState && hashState.systemId) {
+            await this.enterSystem(hashState.systemId);
+            if (hashState.menuPath) {
+                this.navigateToMenu(hashState.menuPath, true); // silent = 不更新 hash
+            }
+        } else {
+            this.showHomepage();
+        }
+    },
+
+    /* ============ URL Hash 路由 ============ */
+
+    /**
+     * 解析 URL hash → { systemId, menuPath }
+     * 格式: #/{systemId}/{encodedMenuPath}
+     */
+    _parseUrlHash() {
+        const hash = location.hash;
+        if (!hash || hash === '#/' || hash === '#') return null;
+        const body = hash.slice(2); // 去掉 "#/"
+        if (!body) return null;
+        const parts = body.split('/');
+        const systemId = decodeURIComponent(parts[0] || '');
+        if (!systemId) return null;
+        const menuPath = parts.length > 1 ? decodeURIComponent(parts.slice(1).join('/')) : null;
+        return { systemId, menuPath };
+    },
+
+    /**
+     * 更新 URL hash（用 replaceState 避免污染浏览器历史）
+     */
+    _updateUrlHash(systemId, menuPath) {
+        let hash = '#/';
+        if (systemId) {
+            hash += encodeURIComponent(systemId);
+            if (menuPath) {
+                hash += '/' + encodeURIComponent(menuPath);
+            }
+        }
+        if (location.hash !== hash) {
+            history.replaceState(null, '', hash);
+        }
+    },
+
+    /**
+     * 浏览器前进/后退时恢复状态
+     */
+    _onPopState() {
+        const state = this._parseUrlHash();
+        if (!state || !state.systemId) {
+            // 回到首页
+            if (this.currentSystemId) {
+                this.showHomepage();
+            }
+            return;
+        }
+        // 切换机型（如果需要）
+        if (state.systemId !== this.currentSystemId) {
+            this.enterSystem(state.systemId).then(() => {
+                if (state.menuPath) this.navigateToMenu(state.menuPath, true);
+            });
+        } else if (state.menuPath !== this.activeMenu) {
+            this.navigateToMenu(state.menuPath, true);
+        }
+    },
+
+    /* ============ 首页 ============ */
+
+    showHomepage() {
+        const homepage = $id('homepage');
+        const detailView = $id('detail-view');
+        if (homepage) homepage.classList.remove('hidden');
+        if (detailView) detailView.classList.add('hidden');
+        this.currentSystemId = null;
+        this.currentProfile = null;
+        this.activeMenu = null;
+        // 清除 URL hash
+        if (location.hash && location.hash !== '#/' && location.hash !== '#') {
+            history.replaceState(null, '', '#/');
+        }
+        this.renderHomepage();
+    },
+
+    async renderHomepage() {
+        const container = $id('system-cards');
+        if (!container) return;
+
+        this.loadedSystems = await Storage.listSystems();
+
+        if (this.loadedSystems.length === 0) {
+            container.innerHTML = '<div class="empty-homepage"><div class="empty-icon">📋</div><p>暂无机型数据</p><p style="font-size:13px;color:#999;">请导入 BIOS 配置文件或加载示例数据</p></div>';
+            return;
+        }
+
+        let html = '';
+        for (const sys of this.loadedSystems) {
+            // 获取版本数量
+            let versionCount = 0;
+            try {
+                const versions = await Storage.listVersions(sys.systemId);
+                versionCount = versions.length;
+            } catch (e) { /* 忽略 */ }
+
+            html += '<div class="system-card" data-system-id="' + UICommon.escAttr(sys.systemId) + '">' +
+                '<div class="system-card-header">' +
+                    '<h3 class="system-card-title">' + UICommon.escHtml(sys.productName || sys.systemId) + '</h3>' +
+                    '<span class="system-card-id">' + UICommon.escHtml(sys.systemId) + '</span>' +
+                '</div>' +
+                '<div class="system-card-body">' +
+                    '<div class="system-card-stat"><span class="stat-label">属性数</span><span class="stat-value">' + (sys.attrCount || 0) + '</span></div>' +
+                    '<div class="system-card-stat"><span class="stat-label">版本数</span><span class="stat-value">' + versionCount + '</span></div>' +
+                    (sys.firmwareVersion ? '<div class="system-card-stat"><span class="stat-label">固件</span><span class="stat-value">' + UICommon.escHtml(sys.firmwareVersion) + '</span></div>' : '') +
+                '</div>' +
+                '<div class="system-card-footer">' +
+                    '<button class="btn btn-primary btn-small btn-enter-system" data-system-id="' + UICommon.escAttr(sys.systemId) + '">进入配置 →</button>' +
+                '</div>' +
+            '</div>';
+        }
+        container.innerHTML = html;
+
+        // 绑定点击事件
+        container.querySelectorAll('.btn-enter-system').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const systemId = e.target.dataset.systemId;
+                await this.enterSystem(systemId);
+            });
+        });
+    },
+
+    async enterSystem(systemId) {
+        const homepage = $id('homepage');
+        const detailView = $id('detail-view');
+        if (homepage) homepage.classList.add('hidden');
+        if (detailView) detailView.classList.remove('hidden');
+        await this.switchSystem(systemId, true);
+        this.renderVersionList();
+        // 进入机型后更新 URL hash
+        this._updateUrlHash(systemId, null);
+    },
+
+    /* ============ 版本管理 ============ */
+
+    async renderVersionList() {
+        const listEl = $id('version-list');
+        if (!listEl || !this.currentSystemId) return;
+
+        try {
+            const versions = await Storage.listVersions(this.currentSystemId);
+            if (versions.length === 0) {
+                listEl.innerHTML = '<div class="version-empty">暂无保存的版本</div>';
+                return;
+            }
+
+            let html = '';
+            for (const v of versions) {
+                const date = new Date(v.savedAt);
+                const dateStr = date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                html += '<div class="version-item" data-version-id="' + UICommon.escAttr(v.id) + '">' +
+                    '<div class="version-info">' +
+                        '<span class="version-name">' + UICommon.escHtml(v.label) + '</span>' +
+                        '<span class="version-meta">' + (v.attrCount || 0) + ' 项 · ' + dateStr + '</span>' +
+                    '</div>' +
+                    '<div class="version-actions">' +
+                        '<button class="btn btn-small btn-activate-version" data-version-id="' + UICommon.escAttr(v.id) + '" title="切换到此版本">切换</button>' +
+                        '<button class="btn btn-small btn-delete-version" data-version-id="' + UICommon.escAttr(v.id) + '" title="删除此版本">🗑</button>' +
+                    '</div>' +
+                '</div>';
+            }
+            listEl.innerHTML = html;
+
+            // 绑定事件
+            listEl.querySelectorAll('.btn-activate-version').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const vid = e.target.dataset.versionId;
+                    await this.activateVersion(vid);
+                });
+            });
+            listEl.querySelectorAll('.btn-delete-version').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const vid = e.target.dataset.versionId;
+                    await this.doDeleteVersion(vid);
+                });
+            });
+        } catch (e) {
+            listEl.innerHTML = '<div class="version-empty">加载版本失败</div>';
+        }
+    },
+
+    showSaveVersionDialog() {
+        if (!this.currentSystemId) {
+            UIRenderer.showNotification('请先选择机型', 'warn');
+            return;
+        }
+
+        const html = '<div class="form-group">' +
+            '<label>版本号</label>' +
+            '<input type="text" id="version-label-input" class="form-input" placeholder="例如: v1.0, v2.3" />' +
+            '<p class="form-hint">输入版本标识（如 v1.0、初始版本 等）</p>' +
+        '</div>';
+
+        UIRenderer.showModal('保存版本', html, () => {
+            const input = $id('version-label-input');
+            const label = input ? input.value.trim() : '';
+            if (!label) {
+                UIRenderer.showNotification('请输入版本号', 'warn');
+                return false;
+            }
+            this.doSaveVersion(label);
+        });
+    },
+
+    async doSaveVersion(label) {
+        try {
+            await Storage.saveVersion(this.currentSystemId, label);
+            UIRenderer.showNotification('版本已保存: ' + label, 'success');
+            this.renderVersionList();
+            this.renderHomepage(); // 刷新首页版本数
+        } catch (e) {
+            UIRenderer.showNotification('保存版本失败: ' + e.message, 'error', 5000);
+        }
+    },
+
+    async activateVersion(versionId) {
+        try {
+            await Storage.activateVersion(this.currentSystemId, versionId);
+            UIRenderer.showNotification('已切换到版本: ' + versionId, 'success');
+            // 重新加载当前机型
+            await this.switchSystem(this.currentSystemId, true);
+            this.renderVersionList();
+        } catch (e) {
+            UIRenderer.showNotification('切换版本失败: ' + e.message, 'error', 5000);
+        }
+    },
+
+    async doDeleteVersion(versionId) {
+        UIRenderer.showModal(
+            '确认删除版本',
+            '<p>确定要删除版本 <strong>' + UICommon.escHtml(versionId) + '</strong> 吗？</p>',
+            async () => {
+                try {
+                    await Storage.deleteVersion(this.currentSystemId, versionId);
+                    UIRenderer.showNotification('版本已删除', 'success');
+                    this.renderVersionList();
+                    this.renderHomepage();
+                } catch (e) {
+                    UIRenderer.showNotification('删除失败: ' + e.message, 'error', 5000);
+                }
+            }
+        );
     },
 
     bindEvents() {
@@ -85,6 +333,7 @@ const AppState = {
         setupDropdown('btn-data-menu');
         setupDropdown('btn-actions-menu');
         setupDropdown('btn-system-more');
+        setupDropdown('btn-login');
 
         // ====== 下拉菜单项 (data-action 分派) ======
         document.addEventListener('click', (e) => {
@@ -97,17 +346,59 @@ const AppState = {
             document.querySelectorAll('.dropdown.active').forEach(d => d.classList.remove('active'));
 
             switch (action) {
-                case 'import':       this.handleImport(); break;
-                case 'load-demo':    this.loadDemoData(); break;
+                case 'import':       Auth.requireAdmin('导入文件').then(ok => { if (ok) this.handleImport(); }); break;
+                case 'load-demo':    Auth.requireAdmin('加载示例数据').then(ok => { if (ok) this.loadDemoData(); }); break;
                 case 'export-excel': this.exportFormat('excel'); break;
                 case 'export-json':  this.exportFormat('json'); break;
-                case 'add-attr':     this.handleAddAttribute(); break;
-                case 'delete-system': this.deleteCurrentSystem(); break;
+                case 'export-template': this.exportTemplate(); break;
+                case 'add-attr':     Auth.requireAdmin('添加选项').then(ok => { if (ok) this.handleAddAttribute(); }); break;
+                case 'delete-system': Auth.requireAdmin('删除机型').then(ok => { if (ok) this.deleteCurrentSystem(); }); break;
+                case 'open-system-manager': Auth.requireAdmin('机型管理').then(ok => { if (ok) SystemManager.open(); }); break;
             }
         });
 
         // ====== 工具栏 ======
         const on = (id, evt, handler) => { const el = $id(id); if (el) el.addEventListener(evt, handler); };
+
+        // 返回首页
+        on('btn-back-home', 'click', () => this.showHomepage());
+
+        // 保存版本
+        on('btn-save-version', 'click', () => this.showSaveVersionDialog());
+
+        // 添加选项（内容区独立按钮）
+        on('btn-add-attr', 'click', () => {
+            Auth.requireAdmin('添加选项').then(ok => { if (ok) this.handleAddAttribute(); });
+        });
+
+        // 列设置按钮
+        on('btn-column-settings', 'click', (e) => {
+            e.stopPropagation();
+            this.toggleColumnSettingsPanel();
+        });
+
+        // 登录/用户
+        on('btn-login', 'click', (e) => {
+            if (!Auth.isLoggedIn) {
+                // 未登录：显示登录对话框
+                e.stopPropagation();
+                Auth.showLoginDialog(() => this.refreshUI());
+            }
+        });
+
+        // 退出登录
+        document.addEventListener('click', (e) => {
+            const item = e.target.closest('.dropdown-item[data-action="logout"]');
+            if (item) {
+                Auth.logout();
+                this.refreshUI();
+                UIRenderer.showNotification('已登出', 'info');
+                // 关闭下拉菜单
+                const dropdown = document.getElementById('dropdown-user');
+                if (dropdown) dropdown.classList.remove('active');
+            }
+        });
+        this.updateUserDisplay();
 
         // 搜索
         const searchInput = $id('search-input');
@@ -120,19 +411,23 @@ const AppState = {
                 }, 300);
             });
         }
+        on('btn-clear-search', 'click', () => this.clearSearch());
 
-        // 机型切换
-        on('select-system', 'change', async (e) => {
-            const id = e.target.value;
-            if (id) await this.switchSystem(id);
-        });
-
-        // 筛选栏
+        // 筛选栏（input 防抖避免按键触发全量重渲染）
         const filterIds = ['filter-attr', 'filter-type', 'filter-scope', 'filter-platform', 'filter-readonly', 'filter-redfish'];
+        let _filterTimer;
         for (const id of filterIds) {
             const el = $id(id);
-            if (el) el.addEventListener('input', () => this.refreshTable());
-            if (el) el.addEventListener('change', () => this.refreshTable());
+            if (el) {
+                el.addEventListener('input', () => {
+                    clearTimeout(_filterTimer);
+                    _filterTimer = setTimeout(() => this.refreshTable(), 120);
+                });
+                el.addEventListener('change', () => {
+                    clearTimeout(_filterTimer);
+                    this.refreshTable();
+                });
+            }
         }
         on('btn-clear-filter', 'click', () => this.clearFilters());
 
@@ -140,9 +435,9 @@ const AppState = {
         const menuTree = $id('menu-tree');
         if (menuTree) {
             menuTree.addEventListener('click', (e) => {
-                if (e.target.closest('#btn-add-menu')) this.handleAddMenu();
+                if (e.target.closest('#btn-add-menu')) { Auth.requireAdmin('添加菜单').then(ok => { if (ok) this.handleAddMenu(); }); }
             });
-            on('btn-add-menu', 'click', () => this.handleAddMenu());
+            on('btn-add-menu', 'click', () => { Auth.requireAdmin('添加菜单').then(ok => { if (ok) this.handleAddMenu(); }); });
         }
 
         // 内容区事件委托（编辑、还原按钮）
@@ -151,12 +446,12 @@ const AppState = {
             tbody.addEventListener('click', (e) => {
                 const btn = e.target.closest('button[data-attr]:not(.btn-reset):not(.btn-icon-disabled)');
                 if (btn) {
-                    this.startEdit(btn.dataset.attr);
+                    Auth.requireAdmin('编辑属性').then(ok => { if (ok) this.startEdit(btn.dataset.attr); });
                     return;
                 }
                 const resetBtn = e.target.closest('.btn-reset');
                 if (resetBtn) {
-                    this.resetAttribute(resetBtn.dataset.attr);
+                    Auth.requireAdmin('还原属性').then(ok => { if (ok) this.resetAttribute(resetBtn.dataset.attr); });
                 }
             });
         }
@@ -227,12 +522,7 @@ const AppState = {
         this.modifiedAttrs = new Set();
         this.loadedSystems = await Storage.listSystems();
         this.renderSystemSelector();
-
-        if (this.loadedSystems.length > 0) {
-            this.switchSystem(this.loadedSystems[0].systemId, true);
-        } else {
-            this.showEmptyState();
-        }
+        this.showHomepage();
     },
 
     async saveCurrentChanges() {
@@ -267,6 +557,9 @@ const AppState = {
                 UIRenderer.showNotification('正在解析文件...', 'info', 2000);
                 const profile = await Parser.parseFile(file);
 
+                // 用文件名作为机型名
+                profile.productName = file.name.replace(/\.(json|json\.gz|xlsx|xls)$/i, '');
+
                 // 检查是否已存在
                 const systems = await Storage.listSystems();
                 const existing = systems.find(s => s.systemId === profile.systemId);
@@ -292,6 +585,10 @@ const AppState = {
 
     async importProfile(profile) {
         DependencyEngine.evaluateAll(profile);
+        // 覆盖已有机型时，先加载版本号避免乐观锁冲突
+        if (Storage._mode === 'api') {
+            await Storage.loadSystem(profile.systemId);
+        }
         await Storage.saveSystem(profile);
 
         this.currentSystemId = profile.systemId;
@@ -332,6 +629,15 @@ const AppState = {
             }
         } catch (err) {
             UIRenderer.showNotification('导出失败: ' + err.message, 'error');
+        }
+    },
+
+    exportTemplate() {
+        try {
+            Exporter.exportTemplateExcel();
+            UIRenderer.showNotification('实例模板导出成功', 'success');
+        } catch (err) {
+            UIRenderer.showNotification('导出模板失败: ' + err.message, 'error');
         }
     },
 
@@ -399,10 +705,53 @@ const AppState = {
                 const el = document.getElementById('edit_attr_value');
                 if (el && el.type !== 'checkbox') el.focus();
             }, 150);
+
+            // 绑定删除按钮
+            setTimeout(() => {
+                const delBtn = document.getElementById('btn-delete-attr');
+                if (delBtn) {
+                    delBtn.addEventListener('click', () => {
+                        UIRenderer.hideModal();
+                        this.confirmDeleteAttribute(attr.attributeName, displayName);
+                    });
+                }
+            }, 100);
         } catch (err) {
             console.error('编辑弹窗打开失败:', err);
             UIRenderer.showNotification('编辑功能异常: ' + err.message, 'error', 5000);
         }
+    },
+
+    confirmDeleteAttribute(attrName, displayName) {
+        if (!Auth.isAdmin) {
+            Auth.showLoginDialog(() => {
+                // 登录后重新检查权限
+                if (Auth.isAdmin) {
+                    this.doDeleteAttribute(attrName, displayName);
+                }
+            });
+            return;
+        }
+        this.doDeleteAttribute(attrName, displayName);
+    },
+
+    doDeleteAttribute(attrName, displayName) {
+        UIRenderer.showModal(
+            '确认删除',
+            '<p>确定要删除选项 <strong>' + UICommon.escHtml(displayName || attrName) + '</strong> 吗？</p><p style="color:var(--color-danger);font-size:12px;">此操作不可恢复。</p>',
+            () => {
+                if (!this.currentProfile || !this.currentProfile.attrMap[attrName]) {
+                    UIRenderer.showNotification('选项已不存在', 'warn');
+                    return;
+                }
+
+                delete this.currentProfile.attrMap[attrName];
+                this.modifiedAttrs.delete(attrName);
+                debouncedSave(this.currentProfile, '删除选项');
+                this.refreshUI();
+                UIRenderer.showNotification('已删除: ' + (displayName || attrName), 'info');
+            }
+        );
     },
 
     confirmEditFromModal(attr) {
@@ -462,6 +811,7 @@ const AppState = {
         attr.helpTextZh = data.helpTextZh || '';
         attr.readOnly = data.readOnly;
         attr.supportsRedfish = data.supportsRedfish;
+        attr.supportsUnicfg = data.supportsUnicfg;
         attr.attributeScope = data.attributeScope;
         attr.platforms = data.platforms;
 
@@ -603,8 +953,13 @@ const AppState = {
 
     /* ============ 菜单导航 ============ */
 
-    navigateToMenu(menuPath) {
+    navigateToMenu(menuPath, silent) {
         this.activeMenu = menuPath;
+
+        // 更新 URL hash（silent 模式下跳过，避免循环触发）
+        if (!silent) {
+            this._updateUrlHash(this.currentSystemId, menuPath);
+        }
 
         // 自动展开该菜单路径的所有祖先（清除折叠状态）
         if (menuPath) {
@@ -630,7 +985,34 @@ const AppState = {
 
     /* ============ UI 刷新 ============ */
 
+    updateUserDisplay() {
+        const btn = $id('btn-login');
+        if (!btn) return;
+        const user = Auth.currentUser;
+        if (user) {
+            const roleLabel = user.role === 'admin' ? '管理员' : '用户';
+            const roleCls = user.role === 'admin' ? 'user-role-admin' : 'user-role-user';
+            btn.innerHTML = '👤 ' + user.username + '<span class="user-role-badge ' + roleCls + '">' + roleLabel + '</span>';
+            btn.title = '点击管理账户';
+            btn.className = 'btn btn-small';
+        } else {
+            btn.innerHTML = '🔒 登录';
+            btn.title = '点击登录';
+            btn.className = 'btn btn-small btn-secondary';
+        }
+        // 管理按钮根据角色显示
+        const isAdmin = Auth.isLoggedIn && Auth.isAdmin;
+        ['btn-system-more'].forEach(id => {
+            const el = $id(id);
+            if (el) el.classList.toggle('hidden', !isAdmin);
+        });
+        // 添加菜单按钮仅管理员可见
+        const addMenuBtn = $id('btn-add-menu');
+        if (addMenuBtn) addMenuBtn.classList.toggle('hidden', !isAdmin);
+    },
+
     refreshUI() {
+        this.updateUserDisplay();
         if (!this.currentProfile) return;
         UIRenderer.renderSidebar(this.currentProfile, this.activeMenu, (menuPath) => {
             this.navigateToMenu(menuPath);
@@ -669,6 +1051,50 @@ const AppState = {
 
     renderSystemSelector() {
         UIRenderer.renderSystemSelector();
+    },
+
+    /* ============ 列设置面板 ============ */
+
+    _columnSettingsPanel: null,
+
+    toggleColumnSettingsPanel() {
+        if (this._columnSettingsPanel) {
+            this._columnSettingsPanel.remove();
+            this._columnSettingsPanel = null;
+            return;
+        }
+
+        const btn = document.getElementById('btn-column-settings');
+        if (!btn) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'column-settings-popup';
+        panel.innerHTML = UITable.renderColumnSettingsPanel();
+
+        // 定位到按钮下方
+        const rect = btn.getBoundingClientRect();
+        panel.style.position = 'fixed';
+        panel.style.top = (rect.bottom + 4) + 'px';
+        panel.style.right = (window.innerWidth - rect.right) + 'px';
+        panel.style.zIndex = '1000';
+
+        document.body.appendChild(panel);
+        this._columnSettingsPanel = panel;
+
+        // 绑定面板事件
+        UITable._bindColumnSettingsEvents();
+
+        // 点击外部关闭
+        const closePanel = (e) => {
+            if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                panel.remove();
+                this._columnSettingsPanel = null;
+                document.removeEventListener('click', closePanel);
+            }
+        };
+        setTimeout(() => {
+            document.addEventListener('click', closePanel);
+        }, 0);
     },
 
     /* ============ 手动添加菜单 & 选项 ============ */
@@ -738,7 +1164,8 @@ const AppState = {
             '添加自定义选项',
             UIRenderer.buildAddAttributeForm(this.currentProfile, this.activeMenu || ''),
             () => this.submitAddAttribute(),
-            null
+            null,
+            { noOverlayClose: true }
         );
 
         // 类型切换事件：显示/隐藏对应表单组
@@ -805,6 +1232,7 @@ const AppState = {
             MenuPath: normalizedPath,
             ReadOnly: data.readOnly,
             SupportsRedfish: data.supportsRedfish,
+            SupportsUnicfg: data.supportsUnicfg,
             AttributeScope: data.scope || '通用',
             Platforms: data.platforms,
             Value: data.value,
@@ -833,10 +1261,8 @@ const AppState = {
                 const data = await res.json();
                 if (data.success) {
                     this.loadedSystems = await Storage.listSystems();
-                    if (this.loadedSystems.length > 0) {
-                        await this.switchSystem(this.loadedSystems[0].systemId, true);
-                    }
                     UIRenderer.showNotification('已加载演示机型: ' + data.loadedName, 'success');
+                    this.showHomepage();
                     return;
                 }
                 throw new Error(data.error || '加载失败');

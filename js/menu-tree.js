@@ -19,9 +19,11 @@ const MenuTree = {
         const pathIndex = {}; // path → menu 的 O(1) 索引
 
         // 复制已有菜单到工作副本
+        // 注意：Object.assign 是浅拷贝，children 是同一数组引用
+        // 必须始终重置 children，否则多次 buildTree 调用会累积重复子节点
         for (const menu of originalMenus) {
             const copy = Object.assign(Object.create(Object.getPrototypeOf(menu)), menu);
-            if (!Array.isArray(copy.children)) copy.children = [];
+            copy.children = [];  // 始终重置，防止上次 buildTree 遗留的引用
             workMap[copy.menuName] = copy;
             pathIndex[copy.menuPath] = copy;
         }
@@ -37,7 +39,8 @@ const MenuTree = {
             }
         }
 
-        // 为缺失的中间路径创建虚拟菜单节点（写入工作副本，不污染原 map）
+        // 为缺失的中间路径创建虚拟菜单节点
+        // 写入原始 menuMap，使 onDrop 能更新其 displayOrder 并持久化
         for (const path of newPathSet) {
             if (!pathIndex[path]) {
                 const parts = path.replace('./', '').split('/').filter(Boolean);
@@ -53,15 +56,16 @@ const MenuTree = {
                 if (!Array.isArray(virtual.children)) virtual.children = [];
                 workMap[key] = virtual;
                 pathIndex[path] = virtual;
+                // 同步写入原始 menuMap，使拖拽排序的 displayOrder 能被保存
+                if (!menuMap[key]) {
+                    menuMap[key] = virtual;
+                }
             }
         }
 
         const allMenus = Object.values(workMap);
-        // 全局按 menuPath 字典序 → 同路径按 displayOrder
-        allMenus.sort((a, b) => {
-            if (a.menuPath !== b.menuPath) return a.menuPath.localeCompare(b.menuPath);
-            return (a.displayOrder || 0) - (b.displayOrder || 0);
-        });
+        // 不在这里排序 — 父子关系建立后由 sortChildren 按 displayOrder 统一排序
+        // 如果此处按 menuPath 字典序排，会覆盖拖拽设置的 displayOrder
 
         // 计算深度 + 构建父子关系（用 pathIndex 实现 O(1) 查找）
         const rootMenus = [];

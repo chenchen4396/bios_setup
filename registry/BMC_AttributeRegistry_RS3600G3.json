@@ -1,0 +1,839 @@
+{
+  "@Redfish.Copyright": "Copyright 2024-2025 Server Vendor Inc. All rights reserved.",
+  "@odata.type": "#AttributeRegistry.v1_3_0.AttributeRegistry",
+  "Id": "BiosAttributeRegistryRS3600G3",
+  "Name": "BIOS Attribute Registry",
+  "Language": "en",
+  "OwningEntity": "ServerVendor",
+  "RegistryVersion": "2.1.0",
+  "Description": "This registry defines a representation of BIOS Attribute classes, menus, and properties for RackServer RS3600 G3 (BMC firmware v4.2.1)",
+
+  "SupportedSystems": [
+    {
+      "ProductName": "RackServer RS3600 G3",
+      "SystemId": "RS3600G3",
+      "FirmwareVersion": "BMC v4.2.1 / BIOS v2.08"
+    }
+  ],
+
+  "Menus": [
+    { "MenuName": "MainMenu",        "DisplayName": "Main",              "DisplayOrder": 1,  "MenuPath": "./Main",            "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "AdvancedMenu",    "DisplayName": "Advanced",          "DisplayOrder": 2,  "MenuPath": "./Advanced",        "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "ProcessorMenu",   "DisplayName": "Processor Config",  "DisplayOrder": 1,  "MenuPath": "./Advanced/Processor",         "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "PrefetcherMenu",  "DisplayName": "Hardware Prefetcher", "DisplayOrder": 1, "MenuPath": "./Advanced/Processor/Prefetcher", "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "CoreMenu",        "DisplayName": "Core Configuration", "DisplayOrder": 2, "MenuPath": "./Advanced/Processor/CoreConfig",  "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "UPIMenu",         "DisplayName": "UPI Configuration", "DisplayOrder": 3,  "MenuPath": "./Advanced/Processor/UPI",         "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "MemoryMenu",      "DisplayName": "Memory Config",     "DisplayOrder": 2,  "MenuPath": "./Advanced/Memory",               "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "MemoryRASMenu",   "DisplayName": "Memory RAS Config", "DisplayOrder": 1,  "MenuPath": "./Advanced/Memory/RAS",            "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "MemInterleave",   "DisplayName": "Interleave Config", "DisplayOrder": 2,  "MenuPath": "./Advanced/Memory/Interleave",     "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "StorageMenu",     "DisplayName": "Storage Config",    "DisplayOrder": 3,  "MenuPath": "./Advanced/Storage",              "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "NetworkMenu",     "DisplayName": "Network Stack",     "DisplayOrder": 4,  "MenuPath": "./Advanced/Network",              "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "PowerMenu",       "DisplayName": "Power & Performance", "DisplayOrder": 5, "MenuPath": "./Advanced/Power",                "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "CPU_PowerMenu",   "DisplayName": "CPU Power Mgmt",    "DisplayOrder": 1,  "MenuPath": "./Advanced/Power/CPU",             "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "PackageCState",   "DisplayName": "Package C-State",   "DisplayOrder": 1,  "MenuPath": "./Advanced/Power/CPU/PackageCState", "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "PCIeMenu",        "DisplayName": "PCIe Config",       "DisplayOrder": 6,  "MenuPath": "./Advanced/PCIe",                 "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "USBConfig",       "DisplayName": "USB Config",        "DisplayOrder": 7,  "MenuPath": "./Advanced/USB",                  "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "BootMenu",        "DisplayName": "Boot Options",      "DisplayOrder": 3,  "MenuPath": "./Boot",                  "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "BootOrderMenu",   "DisplayName": "Boot Order",        "DisplayOrder": 1,  "MenuPath": "./Boot/DeviceOrder",      "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "SecurityMenu",    "DisplayName": "Security",          "DisplayOrder": 4,  "MenuPath": "./Security",              "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "TPMMenu",         "DisplayName": "TPM Config",        "DisplayOrder": 1,  "MenuPath": "./Security/TPM",          "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "SecureBootMenu",  "DisplayName": "Secure Boot",       "DisplayOrder": 2,  "MenuPath": "./Security/SecureBoot",   "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "IntelSGXMenu",    "DisplayName": "Intel SGX",         "DisplayOrder": 3,  "MenuPath": "./Security/IntelSGX",     "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "SvrMgmtMenu",     "DisplayName": "Server Management", "DisplayOrder": 5,  "MenuPath": "./ServerManagement",      "ReadOnly": false, "GrayOut": false, "Hidden": false },
+    { "MenuName": "BMCMenu",         "DisplayName": "BMC Network",       "DisplayOrder": 1,  "MenuPath": "./ServerManagement/BMC",  "ReadOnly": false, "GrayOut": false, "Hidden": false }
+  ],
+
+  "Attributes": [
+    {
+      "AttributeName": "SysBiosVersion", "DisplayName": "BIOS Version", "DisplayOrder": 1, "Type": "String",
+      "DefaultValue": "RS3600G3_B0208", "ReadOnly": true, "Immutable": true, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Main",
+      "HelpText": "Current BIOS firmware version installed on the system. Read-only value updated after firmware upgrade.",
+      "MinLength": 0, "MaxLength": 64
+    },
+    {
+      "AttributeName": "SysBmcVersion", "DisplayName": "BMC Firmware Version", "DisplayOrder": 2, "Type": "String",
+      "DefaultValue": "v4.2.1", "ReadOnly": true, "Immutable": true, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Main",
+      "HelpText": "Current BMC firmware version. Provides out-of-band management and monitoring capabilities.",
+      "MinLength": 0, "MaxLength": 32
+    },
+    {
+      "AttributeName": "SysSerialNumber", "DisplayName": "System Serial Number", "DisplayOrder": 3, "Type": "String",
+      "DefaultValue": "SN2025031800123", "ReadOnly": true, "Immutable": true, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Main",
+      "HelpText": "Unique system serial number assigned at manufacturing for warranty and asset tracking.",
+      "MinLength": 0, "MaxLength": 64
+    },
+    {
+      "AttributeName": "SysAssetTag", "DisplayName": "Asset Tag", "DisplayOrder": 4, "Type": "String",
+      "DefaultValue": "", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Main",
+      "HelpText": "User-defined asset tag string for inventory management. Can be set via Redfish or BIOS setup.",
+      "MinLength": 0, "MaxLength": 32
+    },
+    {
+      "AttributeName": "SysTotalMemory", "DisplayName": "Total Memory Size", "DisplayOrder": 5, "Type": "String",
+      "DefaultValue": "256 GB", "ReadOnly": true, "Immutable": true, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Main",
+      "HelpText": "Total physical memory detected during POST. Read from DIMM SPD data across all populated channels.",
+      "MinLength": 0, "MaxLength": 16
+    },
+    {
+      "AttributeName": "ProcHyperThreading", "DisplayName": "Hyper-Threading Technology", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor",
+      "HelpText": "Enables Intel Hyper-Threading Technology. Each physical core appears as two logical processors to the OS.",
+      "WarningText": "Changing this setting requires a system reset to take effect.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "ProcVTx", "DisplayName": "Intel VT-x", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor",
+      "HelpText": "Intel Virtualization Technology for IA-32. Provides hardware-assisted CPU virtualization required by hypervisors.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "ProcVTD", "DisplayName": "Intel VT-d", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor",
+      "HelpText": "Intel VT for Directed I/O. Enables DMA remapping for I/O device virtualization. Required for PCIe passthrough.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "ProcTurboMode", "DisplayName": "Turbo Boost Technology", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor",
+      "HelpText": "Intel Turbo Boost Technology dynamically increases processor frequency when thermal and power headroom permits.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "ProcCState", "DisplayName": "C-State Control", "DisplayOrder": 5,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor",
+      "HelpText": "Enables processor C-States for power saving when cores are idle.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "ProcActiveCores", "DisplayName": "Active Processor Cores", "DisplayOrder": 6,
+      "Type": "Enumeration", "DefaultValue": "All", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/CoreConfig",
+      "HelpText": "Number of active processor cores per socket. Reducing core count lowers power consumption.",
+      "Value": [
+        { "ValueName": "All", "ValueDisplayName": "All Cores" },
+        { "ValueName": "48", "ValueDisplayName": "48 Cores" },
+        { "ValueName": "32", "ValueDisplayName": "32 Cores" },
+        { "ValueName": "16", "ValueDisplayName": "16 Cores" },
+        { "ValueName": "8", "ValueDisplayName": "8 Cores" }
+      ]
+    },
+    {
+      "AttributeName": "ProcAESNI", "DisplayName": "AES-NI", "DisplayOrder": 7,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/CoreConfig",
+      "HelpText": "Intel AES-NI instruction set for hardware-accelerated AES encryption/decryption.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "ProcAVX", "DisplayName": "AVX Support", "DisplayOrder": 8,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/CoreConfig",
+      "HelpText": "Intel Advanced Vector Extensions for high-throughput floating-point and integer computations.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PrefMLCStream", "DisplayName": "MLC Streamer Prefetcher", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/Prefetcher",
+      "HelpText": "MLC stream prefetcher. Detects sequential streams and prefetches into L2 cache.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PrefMLCSpatial", "DisplayName": "MLC Spatial Prefetcher", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/Prefetcher",
+      "HelpText": "MLC spatial prefetcher. Fetches adjacent cache lines for spatial locality workloads.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PrefDCUStream", "DisplayName": "DCU Streamer Prefetcher", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/Prefetcher",
+      "HelpText": "Data Cache Unit stream prefetcher. Detects sequential load patterns for L1 data cache.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PrefDCUIP", "DisplayName": "DCU IP Prefetcher", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/Prefetcher",
+      "HelpText": "DCU instruction-pointer prefetcher. Uses load history to predict future addresses.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PrefLLCPrefetch", "DisplayName": "LLC Prefetcher", "DisplayOrder": 5,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/Prefetcher",
+      "HelpText": "Last Level Cache (L3) prefetcher. Prefetches into shared LLC to reduce off-chip latency.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "UPILinkSpeed", "DisplayName": "UPI Link Speed", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Auto", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/UPI",
+      "HelpText": "Ultra Path Interconnect link data rate. Auto negotiates optimal rate.",
+      "Value": [
+        { "ValueName": "Auto", "ValueDisplayName": "Auto" },
+        { "ValueName": "11_2_GTps", "ValueDisplayName": "11.2 GT/s" },
+        { "ValueName": "10_4_GTps", "ValueDisplayName": "10.4 GT/s" },
+        { "ValueName": "9_6_GTps", "ValueDisplayName": "9.6 GT/s" }
+      ]
+    },
+    {
+      "AttributeName": "UPILinkFreq", "DisplayName": "UPI Link Frequency", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Auto", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Processor/UPI",
+      "HelpText": "UPI reference clock frequency select. Higher frequencies increase inter-socket bandwidth.",
+      "Value": [
+        { "ValueName": "Auto", "ValueDisplayName": "Auto" },
+        { "ValueName": "3200MHz", "ValueDisplayName": "3200 MHz" },
+        { "ValueName": "2933MHz", "ValueDisplayName": "2933 MHz" },
+        { "ValueName": "2667MHz", "ValueDisplayName": "2667 MHz" },
+        { "ValueName": "2400MHz", "ValueDisplayName": "2400 MHz" }
+      ]
+    },
+    {
+      "AttributeName": "MemSpeed", "DisplayName": "Memory Speed", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Auto", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory",
+      "HelpText": "Memory operating frequency in Mega Transfers per second. Auto mode trains optimal speed from DIMM SPD.",
+      "Value": [
+        { "ValueName": "Auto", "ValueDisplayName": "Auto" },
+        { "ValueName": "5600MTps", "ValueDisplayName": "5600 MT/s" },
+        { "ValueName": "4800MTps", "ValueDisplayName": "4800 MT/s" },
+        { "ValueName": "4400MTps", "ValueDisplayName": "4400 MT/s" },
+        { "ValueName": "4000MTps", "ValueDisplayName": "4000 MT/s" }
+      ]
+    },
+    {
+      "AttributeName": "MemNUMA", "DisplayName": "NUMA Optimization", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory",
+      "HelpText": "Enables NUMA-aware memory topology reporting to the OS via ACPI SRAT.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "MemECC", "DisplayName": "ECC Support", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": true, "Immutable": true, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory",
+      "HelpText": "Error Correction Code for system memory. Provides single-bit error correction and multi-bit error detection.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" }
+      ]
+    },
+    {
+      "AttributeName": "MemTest", "DisplayName": "Memory Test on Boot", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "Fast", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory",
+      "HelpText": "POST memory test mode. Full performs comprehensive testing. Fast performs quick test. Disabled skips test.",
+      "Value": [
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "Fast", "ValueDisplayName": "Fast Test" },
+        { "ValueName": "Full", "ValueDisplayName": "Full Test" }
+      ]
+    },
+    {
+      "AttributeName": "MemPatrolScrub", "DisplayName": "Patrol Scrub", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/RAS",
+      "HelpText": "Background memory patrol scrub. Periodically reads and corrects single-bit errors.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "MemPatrolInterval", "DisplayName": "Patrol Scrub Interval", "DisplayOrder": 2,
+      "Type": "Integer", "DefaultValue": 24, "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/RAS",
+      "HelpText": "Patrol scrub interval in hours. Shorter intervals increase correction frequency.",
+      "LowerBound": 1, "UpperBound": 168, "ScalarIncrement": 1
+    },
+    {
+      "AttributeName": "MemDemandScrub", "DisplayName": "Demand Scrub", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/RAS",
+      "HelpText": "Corrects single-bit errors on demand reads. Detected errors are corrected immediately.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "MemADR", "DisplayName": "ADR Data Save", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/RAS",
+      "HelpText": "Asynchronous DRAM Refresh with data save. On power loss, saves critical memory content.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "MemInterleaveGran", "DisplayName": "Interleave Granularity", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "256B", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/Interleave",
+      "HelpText": "Memory interleave block size across channels.",
+      "Value": [
+        { "ValueName": "64B", "ValueDisplayName": "64 Bytes" },
+        { "ValueName": "128B", "ValueDisplayName": "128 Bytes" },
+        { "ValueName": "256B", "ValueDisplayName": "256 Bytes" },
+        { "ValueName": "512B", "ValueDisplayName": "512 Bytes" },
+        { "ValueName": "1KB", "ValueDisplayName": "1 KB" },
+        { "ValueName": "4KB", "ValueDisplayName": "4 KB" }
+      ]
+    },
+    {
+      "AttributeName": "MemChanInterleave", "DisplayName": "Channel Interleave", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Auto", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/Interleave",
+      "HelpText": "Number of memory channels to interleave for parallel bandwidth.",
+      "Value": [
+        { "ValueName": "Auto", "ValueDisplayName": "Auto" },
+        { "ValueName": "1Way", "ValueDisplayName": "1-Way" },
+        { "ValueName": "2Way", "ValueDisplayName": "2-Way" },
+        { "ValueName": "4Way", "ValueDisplayName": "4-Way" }
+      ]
+    },
+    {
+      "AttributeName": "MemMirror", "DisplayName": "Memory Mirroring", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Disabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/Interleave",
+      "HelpText": "Full memory mirroring duplicates writes to two channels. Survives complete channel failure.",
+      "Value": [
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled (Full Mirror)" }
+      ]
+    },
+    {
+      "AttributeName": "MemRankSparing", "DisplayName": "Rank Sparing", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "Disabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Memory/Interleave",
+      "HelpText": "Reserves a spare DRAM rank per channel to replace a failing rank.",
+      "Value": [
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" }
+      ]
+    },
+    {
+      "AttributeName": "SataMode", "DisplayName": "SATA Controller Mode", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "AHCI", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Storage",
+      "HelpText": "SATA controller operation mode. AHCI provides NCQ. RAID enables firmware RAID. Disabled turns off SATA.",
+      "Value": [
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "AHCI", "ValueDisplayName": "AHCI" },
+        { "ValueName": "RAID", "ValueDisplayName": "RAID" }
+      ]
+    },
+    {
+      "AttributeName": "NVMeMode", "DisplayName": "NVMe Drive Mode", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "OS_Native", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Storage",
+      "HelpText": "NVMe SSD management mode. BIOS mode for legacy, OS Native for direct OS control.",
+      "Value": [
+        { "ValueName": "BIOS", "ValueDisplayName": "BIOS Managed" },
+        { "ValueName": "OS_Native", "ValueDisplayName": "OS Native" }
+      ]
+    },
+    {
+      "AttributeName": "SMARTEnable", "DisplayName": "SMART Monitoring", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Storage",
+      "HelpText": "Enables S.M.A.R.T. monitoring and reporting during POST. Warns about impending drive failures.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "NetPXEBoot", "DisplayName": "PXE Boot", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Network",
+      "HelpText": "Preboot eXecution Environment support. Enables network boot via DHCP/TFTP for OS deployment.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "NetHTTPBoot", "DisplayName": "HTTP Boot", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Network",
+      "HelpText": "UEFI HTTP/HTTPS boot support for cloud and datacenter provisioning.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "NetWakeOnLan", "DisplayName": "Wake-on-LAN", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Network",
+      "HelpText": "Enables remote system wake-up via Magic Packet over Ethernet.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PwrPolicy", "DisplayName": "Power Management Policy", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Balanced", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power",
+      "HelpText": "System power and performance policy. Performance maximizes throughput, Balanced optimizes ratio, Power Saving prioritizes efficiency.",
+      "Value": [
+        { "ValueName": "Performance", "ValueDisplayName": "Performance" },
+        { "ValueName": "Balanced", "ValueDisplayName": "Balanced" },
+        { "ValueName": "PowerSaving", "ValueDisplayName": "Power Saving" }
+      ]
+    },
+    {
+      "AttributeName": "PwrCapEnable", "DisplayName": "Power Cap Enable", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Disabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power",
+      "HelpText": "Enables dynamic power capping to limit system power consumption.",
+      "Value": [
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" }
+      ]
+    },
+    {
+      "AttributeName": "PwrCapWatts", "DisplayName": "Power Cap Value", "DisplayOrder": 3,
+      "Type": "Integer", "DefaultValue": 1200, "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power",
+      "HelpText": "Maximum system power consumption in watts when power capping is enabled.",
+      "LowerBound": 400, "UpperBound": 2000, "ScalarIncrement": 10
+    },
+    {
+      "AttributeName": "CPU_EIST", "DisplayName": "Enhanced SpeedStep (EIST)", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power/CPU",
+      "HelpText": "Intel Enhanced SpeedStep. Enables dynamic processor frequency and voltage scaling.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "CPU_HWP", "DisplayName": "Hardware P-State (HWP)", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power/CPU",
+      "HelpText": "Intel Speed Shift Technology. Hardware-controlled P-state transitions.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "CPU_EnergyBias", "DisplayName": "Energy Performance Bias", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Balanced", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power/CPU",
+      "HelpText": "Hints the processor to optimize for performance or power efficiency.",
+      "Value": [
+        { "ValueName": "MaxPerf", "ValueDisplayName": "Maximum Performance" },
+        { "ValueName": "Performance", "ValueDisplayName": "Performance" },
+        { "ValueName": "Balanced", "ValueDisplayName": "Balanced Performance" },
+        { "ValueName": "BalancedPower", "ValueDisplayName": "Balanced Power" },
+        { "ValueName": "PowerSaving", "ValueDisplayName": "Power Saving" }
+      ]
+    },
+    {
+      "AttributeName": "CPU_PkgCState", "DisplayName": "Package C-State Limit", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "NoLimit", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/Power/CPU/PackageCState",
+      "HelpText": "Maximum package C-State allowed. Deeper states save more power but increase exit latency.",
+      "Value": [
+        { "ValueName": "NoLimit", "ValueDisplayName": "No Limit (C10)" },
+        { "ValueName": "C6", "ValueDisplayName": "C6 Retention" },
+        { "ValueName": "C3", "ValueDisplayName": "C3" },
+        { "ValueName": "C1E", "ValueDisplayName": "C1E Enhanced" },
+        { "ValueName": "C1", "ValueDisplayName": "C1 (Halt)" },
+        { "ValueName": "C0", "ValueDisplayName": "C0/C1 Only" }
+      ]
+    },
+    {
+      "AttributeName": "PCIeMaxSpeed", "DisplayName": "PCIe Max Link Speed", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Auto", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/PCIe",
+      "HelpText": "Maximum PCI Express link speed.",
+      "Value": [
+        { "ValueName": "Auto", "ValueDisplayName": "Auto" },
+        { "ValueName": "Gen5", "ValueDisplayName": "PCIe 5.0 (32 GT/s)" },
+        { "ValueName": "Gen4", "ValueDisplayName": "PCIe 4.0 (16 GT/s)" },
+        { "ValueName": "Gen3", "ValueDisplayName": "PCIe 3.0 (8 GT/s)" }
+      ]
+    },
+    {
+      "AttributeName": "PCIeAER", "DisplayName": "PCIe AER Support", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/PCIe",
+      "HelpText": "PCI Express Advanced Error Reporting for detailed error logging and recovery.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PCIeACS", "DisplayName": "ACS Control", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/PCIe",
+      "HelpText": "Access Control Services. Prevents PCIe peer-to-peer transactions. Required for secure device passthrough.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PCIeSR_IOV", "DisplayName": "SR-IOV Support", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/PCIe",
+      "HelpText": "Single Root I/O Virtualization. Exposes virtual functions for direct VM assignment.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "PCIEAbove4G", "DisplayName": "Above 4G Decoding", "DisplayOrder": 5,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/PCIe",
+      "HelpText": "Enables PCIe MMIO decoding above 4 GB. Required for GPUs and accelerators with large BARs.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "USBAllPorts", "DisplayName": "All USB Ports", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/USB",
+      "HelpText": "Master control for all USB ports. Disabling turns off all USB controllers for security.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "USBXHCI", "DisplayName": "XHCI Hand-off", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Advanced/USB",
+      "HelpText": "XHCI USB controller hand-off to OS. Transfers USB ownership to OS during POST.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "BootMode", "DisplayName": "Boot Mode", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "UEFI", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot",
+      "HelpText": "System boot mode. UEFI provides modern firmware with Secure Boot and GPT. Legacy for older OS.",
+      "Value": [
+        { "ValueName": "UEFI", "ValueDisplayName": "UEFI" },
+        { "ValueName": "Legacy", "ValueDisplayName": "Legacy BIOS" },
+        { "ValueName": "Dual", "ValueDisplayName": "Dual (UEFI + Legacy)" }
+      ]
+    },
+    {
+      "AttributeName": "BootFastBoot", "DisplayName": "Fast Boot", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot",
+      "HelpText": "Minimizes POST time by skipping certain hardware initialization.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "BootQuietBoot", "DisplayName": "Quiet Boot", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot",
+      "HelpText": "Displays OEM logo instead of POST diagnostic messages during boot.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "BootNumLock", "DisplayName": "NumLock State", "DisplayOrder": 4,
+      "Type": "Enumeration", "DefaultValue": "On", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot",
+      "HelpText": "Sets the NumLock key state at system boot.",
+      "Value": [
+        { "ValueName": "On", "ValueDisplayName": "On" },
+        { "ValueName": "Off", "ValueDisplayName": "Off" }
+      ]
+    },
+    {
+      "AttributeName": "BootOption1", "DisplayName": "Boot Option #1", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "HardDisk", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot/DeviceOrder",
+      "HelpText": "First boot device in the boot order sequence.",
+      "Value": [
+        { "ValueName": "HardDisk", "ValueDisplayName": "Hard Disk" },
+        { "ValueName": "NVMe0", "ValueDisplayName": "NVMe SSD 0" },
+        { "ValueName": "CDDVD", "ValueDisplayName": "CD/DVD Drive" },
+        { "ValueName": "Network", "ValueDisplayName": "PXE Network" },
+        { "ValueName": "USB", "ValueDisplayName": "USB Device" }
+      ]
+    },
+    {
+      "AttributeName": "BootOption2", "DisplayName": "Boot Option #2", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Network", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot/DeviceOrder",
+      "HelpText": "Second boot device. Attempted if first device fails.",
+      "Value": [
+        { "ValueName": "HardDisk", "ValueDisplayName": "Hard Disk" },
+        { "ValueName": "NVMe0", "ValueDisplayName": "NVMe SSD 0" },
+        { "ValueName": "CDDVD", "ValueDisplayName": "CD/DVD Drive" },
+        { "ValueName": "Network", "ValueDisplayName": "PXE Network" },
+        { "ValueName": "USB", "ValueDisplayName": "USB Device" }
+      ]
+    },
+    {
+      "AttributeName": "BootOption3", "DisplayName": "Boot Option #3", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "USB", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Boot/DeviceOrder",
+      "HelpText": "Third boot device.",
+      "Value": [
+        { "ValueName": "HardDisk", "ValueDisplayName": "Hard Disk" },
+        { "ValueName": "NVMe0", "ValueDisplayName": "NVMe SSD 0" },
+        { "ValueName": "CDDVD", "ValueDisplayName": "CD/DVD Drive" },
+        { "ValueName": "Network", "ValueDisplayName": "PXE Network" },
+        { "ValueName": "USB", "ValueDisplayName": "USB Device" }
+      ]
+    },
+    {
+      "AttributeName": "SecAdminPwd", "DisplayName": "Administrator Password", "DisplayOrder": 1,
+      "Type": "Password", "DefaultValue": "", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Security",
+      "HelpText": "BIOS administrator password. Required for full setup access. Not retrievable via Redfish.",
+      "MinLength": 0, "MaxLength": 20
+    },
+    {
+      "AttributeName": "SecUserPwd", "DisplayName": "User Password", "DisplayOrder": 2,
+      "Type": "Password", "DefaultValue": "", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Security",
+      "HelpText": "BIOS user password. Allows limited boot-time access.",
+      "MinLength": 0, "MaxLength": 20
+    },
+    {
+      "AttributeName": "SecPwdOnBoot", "DisplayName": "Password on Boot", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "Disabled", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Security",
+      "HelpText": "Require password entry on every system boot.",
+      "Value": [
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" }
+      ]
+    },
+    {
+      "AttributeName": "TPMSupport", "DisplayName": "TPM Support", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Security/TPM",
+      "HelpText": "Trusted Platform Module enable. Required for Secure Boot, BitLocker, and measured boot.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "TPMVersion", "DisplayName": "TPM Version", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "TPM_2_0", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Security/TPM",
+      "HelpText": "TPM specification version. TPM 2.0 required for Windows 11 and modern security.",
+      "Value": [
+        { "ValueName": "TPM_2_0", "ValueDisplayName": "TPM 2.0" },
+        { "ValueName": "TPM_1_2", "ValueDisplayName": "TPM 1.2" }
+      ]
+    },
+    {
+      "AttributeName": "TPMClear", "DisplayName": "Clear TPM", "DisplayOrder": 3,
+      "Type": "Enumeration", "DefaultValue": "No", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": false, "AttributeScope": "System", "MenuPath": "./Security/TPM",
+      "HelpText": "Clears TPM ownership and stored keys. All TPM-protected data becomes inaccessible.",
+      "Value": [
+        { "ValueName": "No", "ValueDisplayName": "No" },
+        { "ValueName": "Yes", "ValueDisplayName": "Yes - Clear TPM" }
+      ]
+    },
+    {
+      "AttributeName": "SecureBootEnable", "DisplayName": "Secure Boot", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Security/SecureBoot",
+      "HelpText": "UEFI Secure Boot. Prevents loading of unsigned UEFI drivers and OS bootloaders.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" }
+      ]
+    },
+    {
+      "AttributeName": "SecureBootMode", "DisplayName": "Secure Boot Mode", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "Standard", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Security/SecureBoot",
+      "HelpText": "Secure Boot operational mode. Standard uses factory keys. Custom allows user-defined key management.",
+      "Value": [
+        { "ValueName": "Standard", "ValueDisplayName": "Standard" },
+        { "ValueName": "Custom", "ValueDisplayName": "Custom" }
+      ]
+    },
+    {
+      "AttributeName": "SGXEnable", "DisplayName": "Intel SGX", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "Enabled", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Security/IntelSGX",
+      "HelpText": "Intel Software Guard Extensions. Creates hardware-encrypted enclaves for confidential computing.",
+      "Value": [
+        { "ValueName": "Enabled", "ValueDisplayName": "Enabled" },
+        { "ValueName": "Disabled", "ValueDisplayName": "Disabled" },
+        { "ValueName": "Software", "ValueDisplayName": "Software Controlled" }
+      ]
+    },
+    {
+      "AttributeName": "SGXEPCSize", "DisplayName": "SGX EPC Size", "DisplayOrder": 2,
+      "Type": "Enumeration", "DefaultValue": "64GB", "ReadOnly": false, "Immutable": false, "ResetRequired": true,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./Security/IntelSGX",
+      "HelpText": "Enclave Page Cache memory reservation size for Intel SGX.",
+      "Value": [
+        { "ValueName": "512GB", "ValueDisplayName": "512 GB" },
+        { "ValueName": "256GB", "ValueDisplayName": "256 GB" },
+        { "ValueName": "128GB", "ValueDisplayName": "128 GB" },
+        { "ValueName": "64GB", "ValueDisplayName": "64 GB" },
+        { "ValueName": "32GB", "ValueDisplayName": "32 GB" }
+      ]
+    },
+    {
+      "AttributeName": "BMCIPSource", "DisplayName": "BMC IP Source", "DisplayOrder": 1,
+      "Type": "Enumeration", "DefaultValue": "DHCP", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./ServerManagement/BMC",
+      "HelpText": "BMC network address assignment method. Static requires manual IP, DHCP obtains automatically.",
+      "Value": [
+        { "ValueName": "DHCP", "ValueDisplayName": "DHCP" },
+        { "ValueName": "Static", "ValueDisplayName": "Static" }
+      ]
+    },
+    {
+      "AttributeName": "BMCIPAddress", "DisplayName": "BMC IP Address", "DisplayOrder": 2,
+      "Type": "String", "DefaultValue": "192.168.1.100", "ReadOnly": false, "Immutable": false, "ResetRequired": false,
+      "SupportsRedfish": true, "AttributeScope": "System", "MenuPath": "./ServerManagement/BMC",
+      "HelpText": "BMC IPv4 address when IP Source is set to Static.",
+      "MinLength": 7, "MaxLength": 15,
+      "ValueExpression": "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+    }
+  ],
+
+  "Dependencies": [
+    {
+      "DependencyFor": "ProcVTD",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "ProcVTx", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "Enabled"}],
+        "MapTerms": "AND", "MapToAttribute": "ProcVTD", "MapToProperty": "GrayOut", "MapToValue": "false"
+      }
+    },
+    {
+      "DependencyFor": "ProcVTD",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "ProcVTx", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "Disabled"}],
+        "MapTerms": "AND", "MapToAttribute": "ProcVTD", "MapToProperty": "GrayOut", "MapToValue": "true"
+      }
+    },
+    {
+      "DependencyFor": "SGXEPCSize",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "SGXEnable", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "Enabled"}],
+        "MapTerms": "AND", "MapToAttribute": "SGXEPCSize", "MapToProperty": "GrayOut", "MapToValue": "false"
+      }
+    },
+    {
+      "DependencyFor": "SGXEPCSize",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "SGXEnable", "MapFromProperty": "CurrentValue", "MapFromCondition": "NEQ", "MapFromValue": "Enabled"}],
+        "MapTerms": "AND", "MapToAttribute": "SGXEPCSize", "MapToProperty": "GrayOut", "MapToValue": "true"
+      }
+    },
+    {
+      "DependencyFor": "PwrCapWatts",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "PwrCapEnable", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "Enabled"}],
+        "MapTerms": "AND", "MapToAttribute": "PwrCapWatts", "MapToProperty": "GrayOut", "MapToValue": "false"
+      }
+    },
+    {
+      "DependencyFor": "PwrCapWatts",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "PwrCapEnable", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "Disabled"}],
+        "MapTerms": "AND", "MapToAttribute": "PwrCapWatts", "MapToProperty": "GrayOut", "MapToValue": "true"
+      }
+    },
+    {
+      "DependencyFor": "BMCIPAddress",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "BMCIPSource", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "Static"}],
+        "MapTerms": "AND", "MapToAttribute": "BMCIPAddress", "MapToProperty": "GrayOut", "MapToValue": "false"
+      }
+    },
+    {
+      "DependencyFor": "BMCIPAddress",
+      "Type": "Map",
+      "Dependency": {
+        "MapFrom": [{"MapFromAttribute": "BMCIPSource", "MapFromProperty": "CurrentValue", "MapFromCondition": "EQU", "MapFromValue": "DHCP"}],
+        "MapTerms": "AND", "MapToAttribute": "BMCIPAddress", "MapToProperty": "GrayOut", "MapToValue": "true"
+      }
+    }
+  ]
+}

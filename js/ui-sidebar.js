@@ -8,6 +8,11 @@ const UISidebar = {
     _menuCollapseState: {},
     _dragData: null,
     _dragGhost: null,
+    _currentDragOverItem: null, // 当前拖拽悬停的菜单项（避免 onDragLeave 误删高亮）
+    _menuTreeData: null, // 缓存菜单树数据，支持懒加载
+    _menuTreeRoot: null, // 根菜单引用
+    _platformCacheHash: null, // 平台筛选缓存哈希
+    _scopeCacheHash: null, // 适用客户筛选缓存哈希
 
     renderSidebar(profile, activeMenu, onMenuClick) {
         // 刷新机型选择器
@@ -21,6 +26,10 @@ const UISidebar = {
         } else {
             rootMenus = MenuTree.buildTreeFromAttributes(profile.attrMap);
         }
+
+        // 缓存菜单树数据
+        this._menuTreeData = menuMap;
+        this._menuTreeRoot = rootMenus;
 
         const treeEl = document.getElementById('menu-tree');
 
@@ -38,13 +47,15 @@ const UISidebar = {
 
         let html = '<div class="menu-label-row">' +
             '<span class="menu-label">菜单导航</span>' +
-            '<button id="btn-add-menu" title="添加自定义菜单">+ 菜单</button></div>';
+            '<button id="btn-add-menu" title="添加自定义菜单"' +
+                (Auth.isAdmin ? '' : ' class="hidden"') +
+                '>＋ 菜单</button></div>';
 
         // 全部属性入口（不可拖拽）
         const allActive = activeMenu === null || activeMenu === undefined;
         html += '<button class="menu-item' + (allActive ? ' active' : '') + '" data-menu="">所有属性</button>';
 
-        // 递归渲染
+        // 递归渲染（懒加载优化：只渲染展开的节点）
         const escH = UICommon.escHtml, escA = UICommon.escAttr;
         const renderMenu = (menus, depth, parentPath) => {
             for (let idx = 0; idx < menus.length; idx++) {
@@ -54,9 +65,11 @@ const UISidebar = {
                 const active = activeMenu === menu.menuPath;
 
                 const expandKey = 'menu_' + menu.menuPath;
+                // 检查是否需要自动展开（激活菜单的祖先）
+                const shouldAutoExpand = expandedPaths.has(menu.menuPath);
                 const isExpanded = this._menuCollapseState[expandKey] !== undefined
                     ? this._menuCollapseState[expandKey]
-                    : true;
+                    : shouldAutoExpand;
 
                 const parentKey = parentPath || 'root';
                 const order = menu.displayOrder ?? idx;
@@ -81,7 +94,10 @@ const UISidebar = {
                         '<span class="menu-arrow">' + arrow + '</span>' +
                         escH(name) + '</div>' +
                         '<div class="menu-children' + (isExpanded ? '' : ' menu-collapsed') + '" data-drop-zone="' + escA(menu.menuPath) + '">';
-                    renderMenu(menu.children, depth + 1, menu.menuPath);
+                    // 懒加载：只在展开时渲染子节点
+                    if (isExpanded) {
+                        renderMenu(menu.children, depth + 1, menu.menuPath);
+                    }
                     html += '</div></div>';
                 } else {
                     html += '<div class="menu-item' + (active ? ' active' : '') +
@@ -101,30 +117,41 @@ const UISidebar = {
         renderMenu(rootMenus, 0, 'root');
         treeEl.innerHTML = html;
 
-        // 事件委托: 点击、折叠
-        treeEl.querySelectorAll('.menu-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                if (e.target.closest('.menu-drag-handle')) return; // 拖拽手柄不触发点击
-                const menuPath = item.dataset.menu;
-                const expandKey = item.dataset.expandkey;
-                if (expandKey) {
-                    const group = item.closest('.menu-group');
-                    const childrenDiv = group ? group.querySelector(':scope > .menu-children') : null;
-                    if (childrenDiv) {
-                        const isCollapsed = childrenDiv.classList.toggle('menu-collapsed');
-                        this._menuCollapseState[expandKey] = !isCollapsed;
-                        const arrow = item.querySelector('.menu-arrow');
-                        if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+        // 事件委托（移除旧的委托避免累积）
+        if (this._menuClickHandler) {
+            treeEl.removeEventListener('click', this._menuClickHandler);
+        }
+        this._menuClickHandler = (e) => {
+            const item = e.target.closest('.menu-item');
+            if (!item) return;
+            if (e.target.closest('.menu-drag-handle')) return; // 拖拽手柄不触发点击
+
+            const menuPath = item.dataset.menu;
+            const expandKey = item.dataset.expandkey;
+            if (expandKey) {
+                const group = item.closest('.menu-group');
+                const childrenDiv = group ? group.querySelector(':scope > .menu-children') : null;
+                if (childrenDiv) {
+                    const isCollapsed = childrenDiv.classList.toggle('menu-collapsed');
+                    this._menuCollapseState[expandKey] = !isCollapsed;
+                    const arrow = item.querySelector('.menu-arrow');
+                    if (arrow) arrow.textContent = isCollapsed ? '▶' : '▼';
+
+                    // 懒加载：展开时动态渲染子节点
+                    if (!isCollapsed && childrenDiv.children.length === 0) {
+                        const depth = parseInt(item.dataset.depth) || 0;
+                        this._renderLazyChildren(menuPath, childrenDiv, depth + 1);
                     }
                 }
-                if (menuPath !== undefined) {
-                    onMenuClick(menuPath || null);
-                    treeEl.querySelectorAll('.menu-item.active').forEach(el => el.classList.remove('active'));
-                    item.classList.add('active');
-                }
-                e.stopPropagation();
-            });
-        });
+            }
+            if (menuPath !== undefined) {
+                onMenuClick(menuPath || null);
+                treeEl.querySelectorAll('.menu-item.active').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+            }
+            e.stopPropagation();
+        };
+        treeEl.addEventListener('click', this._menuClickHandler);
 
         // === 拖拽排序 ===
         this._bindDragEvents(treeEl);
@@ -136,13 +163,113 @@ const UISidebar = {
         }
     },
 
+    /**
+     * 懒加载渲染子菜单节点（性能优化）
+     */
+    _renderLazyChildren(menuPath, container, depth) {
+        if (!this._menuTreeRoot || !menuPath) return;
+
+        // 查找对应的菜单节点
+        const findMenu = (menus, path) => {
+            for (const menu of menus) {
+                if (menu.menuPath === path) return menu;
+                if (menu.children) {
+                    const found = findMenu(menu.children, path);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+
+        const menu = findMenu(this._menuTreeRoot, menuPath);
+        if (!menu || !menu.children || menu.children.length === 0) return;
+
+        // 使用 DocumentFragment 批量插入，减少重排
+        const frag = document.createDocumentFragment();
+        const escH = UICommon.escHtml, escA = UICommon.escAttr;
+
+        menu.children.forEach((child, idx) => {
+            const hasChildren = child.children && child.children.length > 0;
+            const name = child.displayName || child.displayNameZh || child.menuName;
+            const childExpandKey = 'menu_' + child.menuPath;
+            const childExpanded = this._menuCollapseState[childExpandKey] !== undefined
+                ? this._menuCollapseState[childExpandKey]
+                : true;
+            const order = child.displayOrder ?? idx;
+
+            const dragHandle = document.createElement('span');
+            dragHandle.className = 'menu-drag-handle';
+            dragHandle.title = '拖拽排序';
+            dragHandle.draggable = true;
+            dragHandle.textContent = '⋮⋮';
+
+            if (hasChildren) {
+                const group = document.createElement('div');
+                group.className = 'menu-group';
+                group.dataset.menuGroup = child.menuPath;
+
+                const item = document.createElement('div');
+                item.className = 'menu-item menu-has-children depth-' + depth;
+                item.tabIndex = 0;
+                item.role = 'button';
+                item.dataset.menu = child.menuPath;
+                item.dataset.menuName = child.menuName;
+                item.dataset.parent = menuPath;
+                item.dataset.order = order;
+                item.dataset.depth = depth;
+                item.dataset.expandkey = childExpandKey;
+                item.title = name;
+
+                const arrow = document.createElement('span');
+                arrow.className = 'menu-arrow';
+                arrow.textContent = childExpanded ? '▼' : '▶';
+
+                item.appendChild(dragHandle);
+                item.appendChild(arrow);
+                item.appendChild(document.createTextNode(name));
+
+                const childrenDiv = document.createElement('div');
+                childrenDiv.className = 'menu-children' + (childExpanded ? '' : ' menu-collapsed');
+                childrenDiv.dataset.dropZone = child.menuPath;
+
+                // 懒加载：只在展开时渲染子节点
+                if (childExpanded) {
+                    this._renderLazyChildren(child.menuPath, childrenDiv, depth + 1);
+                }
+
+                group.appendChild(item);
+                group.appendChild(childrenDiv);
+                frag.appendChild(group);
+            } else {
+                const item = document.createElement('div');
+                item.className = 'menu-item depth-' + depth;
+                item.tabIndex = 0;
+                item.role = 'button';
+                item.dataset.menu = child.menuPath;
+                item.dataset.menuName = child.menuName;
+                item.dataset.parent = menuPath;
+                item.dataset.order = order;
+                item.dataset.depth = depth;
+                item.title = name;
+
+                item.appendChild(dragHandle);
+                item.appendChild(document.createTextNode(name));
+                frag.appendChild(item);
+            }
+        });
+
+        container.appendChild(frag);
+    },
+
     /* ============ 拖拽排序 ============ */
 
     _bindDragEvents(treeEl) {
+        // 移除旧监听器避免累积
+        if (this._dragCleanup) { this._dragCleanup(); }
+
         const self = this;
 
-        // dragstart — 仅从手柄 span 触发（draggable 在手柄上）
-        treeEl.addEventListener('dragstart', (e) => {
+        const onDragStart = (e) => {
             const item = e.target.closest('.menu-item');
             if (!item || !item.dataset.menu || item.dataset.menu === '') { e.preventDefault(); return; }
             if (item.dataset.parent === undefined) { e.preventDefault(); return; }
@@ -155,51 +282,90 @@ const UISidebar = {
                 depth: parseInt(item.dataset.depth) || 0,
                 el: item
             };
+            self._currentDragOverItem = null;
 
             item.classList.add('menu-dragging');
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', item.dataset.menu);
-            // 设置拖拽图像为透明 — 改用 CSS 透明度
             setTimeout(() => { if (self._dragData) item.classList.add('menu-dragging'); }, 0);
-        }, false);
+        };
 
-        // dragover — 高亮潜在放置目标
-        treeEl.addEventListener('dragover', (e) => {
+        const onDragOver = (e) => {
             if (!self._dragData) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
 
-            // 查找同级菜单项作为目标
             const target = e.target.closest('.menu-item');
             if (!target || !target.dataset.menu || target === self._dragData.el) {
-                self._clearDragOver();
+                // 移到无效区域：清除当前高亮
+                if (self._currentDragOverItem) {
+                    self._currentDragOverItem.classList.remove('menu-drag-over');
+                    self._currentDragOverItem = null;
+                }
                 return;
             }
 
-            // 只允许同深度拖拽
             const targetDepth = parseInt(target.dataset.depth) || 0;
             const targetParent = target.dataset.parent;
             if (targetDepth !== self._dragData.depth || targetParent !== self._dragData.parent) {
-                self._clearDragOver();
+                // 不同层级/父级：清除当前高亮
+                if (self._currentDragOverItem) {
+                    self._currentDragOverItem.classList.remove('menu-drag-over');
+                    self._currentDragOverItem = null;
+                }
                 return;
             }
 
-            self._clearDragOver();
-            target.classList.add('menu-drag-over');
-        }, false);
+            // 同级同父的有效目标：只在切换目标时更新高亮
+            if (self._currentDragOverItem !== target) {
+                if (self._currentDragOverItem) {
+                    self._currentDragOverItem.classList.remove('menu-drag-over');
+                }
+                self._currentDragOverItem = target;
+                target.classList.add('menu-drag-over');
+            }
+        };
 
-        // dragleave — 清除高亮
-        treeEl.addEventListener('dragleave', (e) => {
+        const onDragEnter = (e) => {
+            // dragenter 用于跟踪进入的新菜单项（补充 dragover 在子元素间移动时的盲区）
+            // 具体验证和高亮由 onDragOver 负责
+        };
+
+        const onDragLeave = (e) => {
+            // 只有当光标真正离开当前高亮的菜单项时才移除高亮
+            // 检查 relatedTarget（光标移入的元素）是否仍在当前高亮项内部
             const item = e.target.closest('.menu-item');
-            if (item) item.classList.remove('menu-drag-over');
-        }, false);
+            if (!item || item !== self._currentDragOverItem) return;
 
-        // drop — 执行排序
-        treeEl.addEventListener('drop', (e) => {
+            const related = e.relatedTarget;
+            if (related && item.contains(related)) {
+                // 光标还在当前菜单项内部（移到子元素），不移除高亮
+                return;
+            }
+            // 光标真正离开了当前菜单项
+            item.classList.remove('menu-drag-over');
+            if (self._currentDragOverItem === item) {
+                self._currentDragOverItem = null;
+            }
+        };
+
+        const onDrop = (e) => {
             e.preventDefault();
             self._clearDragOver();
+            self._currentDragOverItem = null;
 
-            if (!self._dragData) return;
+            if (!self._dragData) {
+                console.warn('[DRAG] onDrop: no _dragData');
+                return;
+            }
+
+            if (typeof Auth !== 'undefined' && !Auth.isAdmin) {
+                if (typeof UIRenderer !== 'undefined') {
+                    UIRenderer.showNotification('拖拽排序需要管理员权限，请先登录管理员账户', 'warn', 3000);
+                }
+                self._endDrag();
+                return;
+            }
 
             const dragged = self._dragData;
             const target = e.target.closest('.menu-item');
@@ -211,19 +377,27 @@ const UISidebar = {
             const targetParent = target.dataset.parent;
             const targetDepth = parseInt(target.dataset.depth) || 0;
             if (targetParent !== dragged.parent || targetDepth !== dragged.depth) {
+                console.warn('[DRAG] onDrop: depth/parent mismatch', {
+                    dragged: { parent: dragged.parent, depth: dragged.depth, menuPath: dragged.menuPath },
+                    target: { parent: targetParent, depth: targetDepth, menuPath: target.dataset.menu }
+                });
                 self._endDrag();
                 return;
             }
 
-            // 收集同级菜单
             const siblings = treeEl.querySelectorAll(
                 '.menu-item[data-parent="' + UICommon.escAttr(dragged.parent) +
                 '"][data-depth="' + dragged.depth + '"]'
             );
+            console.log('[DRAG] onDrop: siblings found', siblings.length, {
+                parent: dragged.parent,
+                depth: dragged.depth,
+                draggedPath: dragged.menuPath,
+                targetPath: target.dataset.menu
+            });
 
             const targetOrder = parseInt(target.dataset.order) || 0;
 
-            // 重新分配 displayOrder
             const ordered = [];
             for (const sib of siblings) {
                 ordered.push({
@@ -234,29 +408,47 @@ const UISidebar = {
                 });
             }
 
-            // 移除被拖拽项，再插入到目标位置
             const dragIdx = ordered.findIndex(o => o.menuPath === dragged.menuPath);
-            if (dragIdx < 0) { self._endDrag(); return; }
+            if (dragIdx < 0) {
+                console.warn('[DRAG] onDrop: dragIdx not found', { draggedPath: dragged.menuPath, ordered: ordered.map(o => o.menuPath) });
+                self._endDrag();
+                return;
+            }
 
             const [dragItem] = ordered.splice(dragIdx, 1);
             const insertIdx = ordered.findIndex(o => o.menuPath === target.dataset.menu);
-            if (insertIdx < 0) { self._endDrag(); return; }
+            if (insertIdx < 0) {
+                console.warn('[DRAG] onDrop: insertIdx not found', { targetPath: target.dataset.menu, ordered: ordered.map(o => o.menuPath) });
+                self._endDrag();
+                return;
+            }
 
-            ordered.splice(dragged.order > targetOrder ? insertIdx : insertIdx, 0, dragItem);
+            // 向前拖动（源在目标之前）：插入到目标之后
+            // 向后拖动（源在目标之后）：插入到目标之前
+            if (dragged.order < targetOrder) {
+                ordered.splice(insertIdx + 1, 0, dragItem);
+            } else {
+                ordered.splice(insertIdx, 0, dragItem);
+            }
+            console.log('[DRAG] onDrop: reordered', ordered.map((o, i) => ({ i, path: o.menuPath, order: i * 10 })));
 
-            // 更新 menuMap 的 displayOrder
             const profile = AppState.currentProfile;
             let changed = false;
+            // 构建 menuPath → menu 索引（兼容 __auto_ 前缀的虚拟节点 key）
+            const pathToMenu = {};
+            for (const key of Object.keys(profile.menuMap)) {
+                const m = profile.menuMap[key];
+                if (m && m.menuPath) pathToMenu[m.menuPath] = m;
+            }
             for (let i = 0; i < ordered.length; i++) {
                 const item = ordered[i];
-                if (item.menuName && profile.menuMap[item.menuName]) {
-                    const menu = profile.menuMap[item.menuName];
+                const menu = item.menuPath ? pathToMenu[item.menuPath] : null;
+                if (menu) {
                     if (menu.displayOrder !== i * 10) {
                         menu.displayOrder = i * 10;
                         changed = true;
                     }
                 }
-                // 更新 DOM
                 item.el.dataset.order = i * 10;
             }
 
@@ -264,20 +456,43 @@ const UISidebar = {
                 debouncedSave(profile, '菜单排序');
             }
 
-            // 重新渲染侧边栏反映新顺序
+            console.log('[DRAG] onDrop: displayOrder updated', {
+                changed,
+                menuMapKeys: Object.keys(profile.menuMap).slice(0, 10),
+                pathToMenuSample: Object.entries(pathToMenu).slice(0, 5).map(([k, v]) => ({ path: k, order: v.displayOrder }))
+            });
+
+            // 先清理拖拽状态，再重建 DOM（避免 _dragData 引用已销毁的元素）
+            self._dragData = null;
+            self._currentDragOverItem = null;
+
             if (typeof AppState !== 'undefined' && AppState.currentProfile) {
                 const active = AppState.activeMenu;
                 const profile = AppState.currentProfile;
                 self.renderSidebar(profile, active, (p) => AppState.navigateToMenu(p));
             }
+        };
 
+        const onDragEnd = () => {
+            self._currentDragOverItem = null;
             self._endDrag();
-        }, false);
+        };
 
-        // dragend — 清理
-        treeEl.addEventListener('dragend', () => {
-            self._endDrag();
-        }, false);
+        treeEl.addEventListener('dragstart', onDragStart);
+        treeEl.addEventListener('dragover', onDragOver);
+        treeEl.addEventListener('dragenter', onDragEnter);
+        treeEl.addEventListener('dragleave', onDragLeave);
+        treeEl.addEventListener('drop', onDrop);
+        treeEl.addEventListener('dragend', onDragEnd);
+
+        this._dragCleanup = () => {
+            treeEl.removeEventListener('dragstart', onDragStart);
+            treeEl.removeEventListener('dragover', onDragOver);
+            treeEl.removeEventListener('dragenter', onDragEnter);
+            treeEl.removeEventListener('dragleave', onDragLeave);
+            treeEl.removeEventListener('drop', onDrop);
+            treeEl.removeEventListener('dragend', onDragEnd);
+        };
     },
 
     _clearDragOver() {
@@ -291,22 +506,23 @@ const UISidebar = {
             this._dragData.el.classList.remove('menu-dragging');
         }
         this._dragData = null;
+        this._currentDragOverItem = null;
         this._clearDragOver();
     },
 
     /* ============ 机型选择器 ============ */
 
     async renderSystemSelector() {
-        const select = document.getElementById('select-system');
-        const systems = await Storage.listSystems();
-        const currentValue = select.value;
-
-        select.innerHTML = '<option value="">-- 选择机型 --</option>';
-        for (const s of systems) {
-            const label = s.productName || s.systemId;
-            const selected = s.systemId === currentValue ? ' selected' : '';
-            select.innerHTML += '<option value="' + UICommon.escAttr(s.systemId) + '"' + selected + '>' +
-                UICommon.escHtml(label) + ' (' + (s.attrCount || 0) + '项)</option>';
+        const nameEl = document.getElementById('current-system-name');
+        if (nameEl) {
+            if (AppState.currentProfile) {
+                const profile = AppState.currentProfile;
+                const label = profile.productName || profile.systemId;
+                const count = Object.keys(profile.attrMap).length;
+                nameEl.textContent = label + ' (' + count + '项)';
+            } else {
+                nameEl.textContent = '-- 选择机型 --';
+            }
         }
 
         this.updatePlatformFilter();
@@ -319,8 +535,14 @@ const UISidebar = {
         if (!filter) return;
         if (!profile) {
             filter.innerHTML = '<option value="">全部平台</option>';
+            this._platformCacheHash = null;
             return;
         }
+
+        // 计算 attrMap 的哈希值，仅变化时重建
+        const currentHash = this._computeAttrMapHash(profile.attrMap);
+        if (currentHash === this._platformCacheHash) return;
+        this._platformCacheHash = currentHash;
 
         const platformSet = new Set();
         for (const attr of Object.values(profile.attrMap)) {
@@ -342,9 +564,15 @@ const UISidebar = {
         const filter = document.getElementById('filter-scope');
         if (!filter) return;
         if (!profile) {
-            filter.innerHTML = '<option value="">全部来源</option>';
+            filter.innerHTML = '<option value="">全部适用客户</option>';
+            this._scopeCacheHash = null;
             return;
         }
+
+        // 计算 attrMap 的哈希值，仅变化时重建
+        const currentHash = this._computeAttrMapHash(profile.attrMap);
+        if (currentHash === this._scopeCacheHash) return;
+        this._scopeCacheHash = currentHash;
 
         const scopeSet = new Set();
         for (const attr of Object.values(profile.attrMap)) {
@@ -353,11 +581,20 @@ const UISidebar = {
         }
 
         const currentVal = filter.value;
-        filter.innerHTML = '<option value="">全部来源</option>';
+        filter.innerHTML = '<option value="">全部适用客户</option>';
         for (const s of Array.from(scopeSet).sort()) {
             const sel = s === currentVal ? ' selected' : '';
             filter.innerHTML += '<option value="' + UICommon.escAttr(s) + '"' + sel + '>' + UICommon.escHtml(s) + '</option>';
         }
+    },
+
+    /**
+     * 计算 attrMap 的快速哈希值（用于缓存判断）
+     */
+    _computeAttrMapHash(attrMap) {
+        if (!attrMap) return null;
+        const keys = Object.keys(attrMap);
+        return keys.length + '_' + (keys[0] || '') + '_' + (keys[keys.length - 1] || '');
     },
 
     /**

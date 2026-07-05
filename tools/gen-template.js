@@ -25,7 +25,7 @@ menuSheet['!cols'] = menuHeader.map(() => ({ wch: 25 }));
 XLSX.utils.book_append_sheet(wb, menuSheet, '菜单结构');
 
 // ==================== Sheet 2: BIOS选项 (主表) ====================
-const attrHeader = ['菜单路径', '属性标识', '显示名称', '中文名称', '默认值', '可选值', '来源', '支持Redfish', '平台', '说明'];
+const attrHeader = ['菜单路径', '属性标识', '显示名称', '中文名称', '默认值', '可选值', '适用客户', '支持Redfish', '平台', '说明'];
 const attrSamples = [
     ['./System/Processor', 'IntelHyperThreading', 'Intel Hyper-Threading Technology', 'Intel 超线程技术', 'Enabled', 'Enabled, Disabled', '通用', '是', '', '启用后每个物理核心可同时运行两个逻辑线程'],
     ['./System/Processor', 'ActiveCores', 'Active Processor Cores', '活动处理器核心数', '0', '0 ~ 56 (步进: 1)', '通用', '是', '', '启用核心数，0=全部'],
@@ -35,8 +35,8 @@ const attrSamples = [
     ['./Boot', 'BootMode', 'Boot Mode', '启动模式', 'Uefi', 'UEFI Boot Mode, Legacy BIOS Mode', '通用', '是', '', 'UEFI支持GPT和Secure Boot'],
     ['./Security', 'SecureBoot', 'Secure Boot', '安全启动', 'Disabled', 'Enabled, Disabled', '通用', '是', '', '仅允许签名引导程序'],
     ['./Security', 'AdminPassword', 'Administrator Password', '管理员密码', '', '长度: 8 ~ 32', '通用', '是', '', 'BIOS管理员密码，输入即设置'],
-    ['./Custom', 'OemFeature', 'OEM Custom Feature', 'OEM自定义特性', 'Disabled', 'Enabled, Disabled', '定制', '否', '2288H V7', '厂商自定义特性说明'],
-    ['./Custom', 'OemDebugLevel', 'OEM Debug Level', 'OEM调试级别', '100', '0 ~ 255 (步进: 1)', '定制', '否', '2288H V7', '厂商调试级别设置'],
+    ['./Custom', 'OemFeature', 'OEM Custom Feature', 'OEM自定义特性', 'Disabled', 'Enabled, Disabled', '字节', '否', '2288H V7', '厂商自定义特性说明'],
+    ['./Custom', 'OemDebugLevel', 'OEM Debug Level', 'OEM调试级别', '100', '0 ~ 255 (步进: 1)', '字节', '否', '2288H V7', '厂商调试级别设置'],
 ];
 const attrSheet = XLSX.utils.aoa_to_sheet([attrHeader, ...attrSamples]);
 attrSheet['!cols'] = attrHeader.map((_, i) => {
