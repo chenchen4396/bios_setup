@@ -2,7 +2,7 @@
 
 基于 DMTF Redfish AttributeRegistry 规范的服务器 BIOS 配置管理工具。
 
-支持多机型管理、菜单导航、类型感知编辑、依赖评估、批量修改、导入导出，通过内网 Node.js 后端实现多人协作与数据持久化。
+支持多机型管理、菜单导航、类型感知编辑、依赖评估、版本管理、多人协作，通过内网 Node.js 后端实现数据持久化。
 
 > 技术架构细节见 [ARCHITECTURE.md](./ARCHITECTURE.md)
 
@@ -21,31 +21,28 @@
 - **[导出]** — 导出当前机型为 Excel 或标准 JSON
 - **[保存]** — 手动保存所有未保存的修改
 - **[加载示例]** — 一键加载演示数据
+- **[数据管理]** — 导入/导出/添加属性/删除机型等
 
 搜索框支持实时搜索（默认 300ms 防抖），输入多个关键词用空格分隔可按加权评分排序。
 
 ### 2. 左侧菜单树
 
-层级菜单按 BIOS MenuPath 组织（如 `Main → Advanced → Processor`），点击菜单在右侧表格显示该菜单下的所有属性。菜单支持折叠/展开，可手动添加自定义菜单。
+层级菜单按 BIOS MenuPath 组织（如 `Main → Advanced → Processor`），点击菜单在右侧表格显示该菜单下的所有属性。菜单支持折叠/展开、拖拽排序，可手动添加自定义菜单。
 
 ### 3. 属性表格
 
-表格 10 列：菜单路径 | 属性标识 | 显示名称 | 中文名 | 默认值 | 可选值 | 来源 | Redfish | 只读 | 说明
+表格 13 列：菜单路径 | 属性标识 | 显示名称 | 中文名 | 默认值 | 可选值 | 来源 | Redfish | Unicfg | 只读 | 平台 | 说明 | 操作
 
-每行右侧有 **[编辑]** 按钮，点击弹出模态框编辑属性（支持全部字段：类型、值、中英文显示名、帮助文本、来源标签、平台等）。Rest 按钮可还原单条修改。
+支持列宽拖拽调整、列显示/隐藏设置。每行右侧有 **[编辑]** 按钮，点击弹出模态框编辑属性（支持全部字段：类型、值、中英文显示名、帮助文本、来源标签、平台等）。Rest 按钮可还原单条修改。
 
-### 4. 筛选栏与激活标签
+### 4. 版本管理面板
 
-表格上方提供 6 维筛选：
+右侧版本面板支持：
 
-- **属性标识** — 输入关键字模糊匹配
-- **类型** — 枚举 / 字符串 / 整数 / 布尔 / 密码
-- **来源** — 动态填充当前机型中的来源标签（通用、字节、百度等）
-- **平台** — 动态填充当前平台值
-- **是否只读** — 是 / 否
-- **是否支持 Redfish** — 是 / 否
-
-选中筛选后，筛选栏下方会显示可关闭的标签 chip，点击 × 可单独清除该筛选项。
+- **保存版本** — 将当前配置保存为命名版本快照
+- **版本对比** — 对比两个版本的属性差异（新增/删除/修改），自动按时间确定新旧顺序
+- **切换版本** — 一键恢复到指定版本的配置
+- **当前标记** — 切换/保存版本后自动标记"当前"标签，刷新页面不丢失
 
 ---
 
@@ -54,15 +51,17 @@
 | 类别 | 功能 |
 |------|------|
 | 机型管理 | 多机型切换、增删、导入；内置通用服务器示例机型 |
-| 菜单导航 | 层级菜单树，折叠/展开，支持自定义添加菜单和属性 |
+| 菜单导航 | 层级菜单树，折叠/展开，拖拽排序，支持自定义添加菜单 |
 | 属性编辑 | 5 种 Redfish 类型（枚举/整数/字符串/布尔/密码），模态框编辑 |
-| 批量编辑 | 进入批量模式后所有属性行变为内联编辑器，一键提交 |
+| 批量编辑 | 批量模式下所有属性行变为内联编辑器，一键提交 |
 | 依赖评估 | DMTF Map 引擎自动处理属性间隐藏/灰显/只读级联 |
 | 搜索 | 跨所有属性实时搜索，中英文加权评分 |
 | 导入 | Registry JSON / JSON.gz / Excel xlsx |
-| 导出 | Excel（中文列名）/ Registry JSON（DMTF 标准） |
+| 导出 | Excel（中文列名）/ Registry JSON（DMTF 标准）/ 实例模板 |
+| 版本管理 | 保存/切换/对比版本，当前版本标记持久化 |
 | 持久化 | 后端 JSON 文件存储，重启不丢；离线自动回退 localStorage |
 | 多人协作 | 乐观锁（`_version`）防止同时编辑覆盖 |
+| 用户认证 | 管理员/普通用户权限，登录注册，操作鉴权 |
 
 ---
 
@@ -120,25 +119,46 @@ http://localhost:3000
 
 ---
 
+## 用户认证
+
+内置用户管理系统，默认管理员 `admin / 1`：
+
+| 角色 | 权限 |
+|------|------|
+| 管理员 | 导入/导出/编辑/删除/拖拽排序/机型管理等所有操作 |
+| 普通用户 | 浏览/搜索等只读操作 |
+
+---
+
 ## 项目结构
 
 ```
 bios-manager/
-├── index.html          # 页面入口
-├── server.js           # Express 后端（API + 静态文件 + 持久化）
-├── start.bat           # Windows 一键启动
+├── index.html            # 页面入口
+├── server.js             # Express 后端（API + 静态文件 + 持久化 + 认证）
+├── start.bat             # Windows 一键启动
 ├── css/
-│   └── styles.css      # 样式
+│   └── styles.css        # 样式
 ├── js/
-│   ├── models.js       # 数据模型与工厂函数
-│   ├── storage.js      # 持久化（API + localStorage 双模式）
-│   ├── parser.js       # 导入解析（JSON / Excel）
-│   ├── app.js          # 主控制器
-│   ├── demo-data.js    # 演示机型内置数据
-│   └── ui-*.js         # 界面子模块
+│   ├── models.js         # 数据模型与工厂函数
+│   ├── storage.js        # 持久化（API + localStorage 双模式）
+│   ├── parser.js         # 导入解析（JSON / Excel）
+│   ├── app.js            # 主控制器（状态管理 / 事件绑定 / 版本对比）
+│   ├── demo-data.js      # 演示机型内置数据
+│   ├── menu-tree.js      # MenuPath → 层级菜单树
+│   ├── dependency-engine.js # DMTF Map 依赖评估引擎
+│   ├── auth.js           # 用户认证与权限管理
+│   ├── export.js         # Excel / Registry JSON 导出
+│   ├── editors.js        # 类型感知内联编辑器
+│   ├── system-manager.js # 机型管理模块
+│   ├── ui-common.js      # 公共 UI 工具（通知、模态框、转义）
+│   ├── ui-sidebar.js     # 侧边栏菜单树渲染、拖拽排序
+│   ├── ui-table.js       # 属性表格渲染、筛选标签、搜索、列设置
+│   ├── ui-forms.js       # 表单构建（添加/编辑属性、菜单）
+│   └── ui-renderer.js    # UI 渲染代理入口
 ├── tools/
-│   └── gen-template.js # Excel 模板生成
-└── data/               # 运行时数据（不提交 Git）
+│   └── gen-template.js   # Excel 模板生成
+└── data/                 # 运行时数据（不提交 Git）
 ```
 
 ---
@@ -151,6 +171,15 @@ bios-manager/
 | GET | `/api/systems/:id` | 读取单机型 |
 | POST | `/api/systems/:id` | 保存/更新（含乐观锁） |
 | DELETE | `/api/systems/:id` | 删除机型 |
+| GET | `/api/systems/:id/versions` | 列出版本（按时间倒序） |
+| POST | `/api/systems/:id/versions` | 保存新版本 |
+| GET | `/api/systems/:id/versions/:vid` | 获取版本详情（用于对比） |
+| POST | `/api/systems/:id/versions/:vid/activate` | 切换版本 |
+| DELETE | `/api/systems/:id/versions/:vid` | 删除版本 |
 | POST | `/api/demo/load` | 加载演示机型 |
+| POST | `/api/auth/login` | 用户登录 |
+| POST | `/api/auth/register` | 用户注册 |
 
 ---
+
+**License**: MIT
