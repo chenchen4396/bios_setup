@@ -291,8 +291,10 @@ app.get('/api/systems/:id/versions', (req, res) => {
     if (!id) return res.status(400).json({ error: '无效的机型 ID' });
 
     const versions = loadVersions(id);
+    // 按 savedAt 时间倒序排列（最新的在前面）
+    const sortedVersions = [...versions].sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
     // 返回元数据（不含 profile 体）
-    const list = versions.map(v => ({
+    const list = sortedVersions.map(v => ({
         id: v.id,
         label: v.label,
         savedAt: v.savedAt,
@@ -378,6 +380,28 @@ app.delete('/api/systems/:id/versions/:vid', (req, res) => {
 
     saveVersions(id, filtered);
     res.json({ success: true });
+});
+
+/** 获取单个版本的完整 profile（用于版本对比） */
+app.get('/api/systems/:id/versions/:vid', (req, res) => {
+    const id = sanitizeId(req.params.id);
+    const vid = req.params.vid;
+    if (!id) return res.status(400).json({ error: '无效的机型 ID' });
+
+    const versions = loadVersions(id);
+    const version = versions.find(v => v.id === vid);
+    if (!version) {
+        return res.status(404).json({ error: '版本不存在: ' + vid });
+    }
+
+    // 返回版本元数据 + 完整 profile
+    res.json({
+        id: version.id,
+        label: version.label,
+        savedAt: version.savedAt,
+        attrCount: version.attrCount || 0,
+        profile: version.profile
+    });
 });
 
 /** 一键加载演示数据 */

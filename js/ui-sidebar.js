@@ -13,10 +13,14 @@ const UISidebar = {
     _menuTreeRoot: null, // 根菜单引用
     _platformCacheHash: null, // 平台筛选缓存哈希
     _scopeCacheHash: null, // 适用客户筛选缓存哈希
+    _activeMenu: null, // 当前激活的菜单路径
 
     renderSidebar(profile, activeMenu, onMenuClick) {
         // 刷新机型选择器
         this.renderSystemSelector();
+
+        // 保存当前激活菜单路径，供懒加载使用
+        this._activeMenu = activeMenu;
 
         // 构建菜单树
         const menuMap = profile.menuMap;
@@ -196,6 +200,8 @@ const UISidebar = {
                 ? this._menuCollapseState[childExpandKey]
                 : true;
             const order = child.displayOrder ?? idx;
+            // 检查是否为当前激活菜单
+            const isActive = this._activeMenu === child.menuPath;
 
             const dragHandle = document.createElement('span');
             dragHandle.className = 'menu-drag-handle';
@@ -209,7 +215,7 @@ const UISidebar = {
                 group.dataset.menuGroup = child.menuPath;
 
                 const item = document.createElement('div');
-                item.className = 'menu-item menu-has-children depth-' + depth;
+                item.className = 'menu-item menu-has-children depth-' + depth + (isActive ? ' active' : '');
                 item.tabIndex = 0;
                 item.role = 'button';
                 item.dataset.menu = child.menuPath;
@@ -242,7 +248,7 @@ const UISidebar = {
                 frag.appendChild(group);
             } else {
                 const item = document.createElement('div');
-                item.className = 'menu-item depth-' + depth;
+                item.className = 'menu-item depth-' + depth + (isActive ? ' active' : '');
                 item.tabIndex = 0;
                 item.role = 'button';
                 item.dataset.menu = child.menuPath;

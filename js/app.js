@@ -40,6 +40,7 @@ const AppState = {
     searchKeyword: '',
     modifiedAttrs: new Set(),
     loadedSystems: [],
+    currentVersionId: null, // 当前激活的版本 ID
 
     async init() {
         // 初始化存储层（检测后端 API）
@@ -80,7 +81,11 @@ const AppState = {
         const parts = body.split('/');
         const systemId = decodeURIComponent(parts[0] || '');
         if (!systemId) return null;
-        const menuPath = parts.length > 1 ? decodeURIComponent(parts.slice(1).join('/')) : null;
+        let menuPath = null;
+        if (parts.length > 1) {
+            const pathStr = decodeURIComponent(parts.slice(1).join('/'));
+            menuPath = pathStr || null; // 空字符串转为 null
+        }
         return { systemId, menuPath };
     },
 
@@ -213,13 +218,17 @@ const AppState = {
             for (const v of versions) {
                 const date = new Date(v.savedAt);
                 const dateStr = date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-                html += '<div class="version-item" data-version-id="' + UICommon.escAttr(v.id) + '">' +
+                const isCurrent = v.id === this.currentVersionId;
+                html += '<div class="version-item' + (isCurrent ? ' version-current' : '') + '" data-version-id="' + UICommon.escAttr(v.id) + '">' +
                     '<div class="version-info">' +
-                        '<span class="version-name">' + UICommon.escHtml(v.label) + '</span>' +
+                        '<span class="version-name">' + UICommon.escHtml(v.label) +
+                            (isCurrent ? ' <span class="version-current-badge">当前</span>' : '') +
+                        '</span>' +
                         '<span class="version-meta">' + (v.attrCount || 0) + ' 项 · ' + dateStr + '</span>' +
                     '</div>' +
                     '<div class="version-actions">' +
-                        '<button class="btn btn-small btn-activate-version" data-version-id="' + UICommon.escAttr(v.id) + '" title="切换到此版本">切换</button>' +
+                        (isCurrent ? '<span class="btn btn-small btn-current-version" disabled>使用中</span>' :
+                        '<button class="btn btn-small btn-activate-version" data-version-id="' + UICommon.escAttr(v.id) + '" title="切换到此版本">切换</button>') +
                         '<button class="btn btn-small btn-delete-version" data-version-id="' + UICommon.escAttr(v.id) + '" title="删除此版本">🗑</button>' +
                     '</div>' +
                 '</div>';
@@ -270,6 +279,8 @@ const AppState = {
     async doSaveVersion(label) {
         try {
             await Storage.saveVersion(this.currentSystemId, label);
+            this.currentVersionId = label;
+            localStorage.setItem('cv_' + this.currentSystemId, label);
             UIRenderer.showNotification('版本已保存: ' + label, 'success');
             this.renderVersionList();
             this.renderHomepage(); // 刷新首页版本数
@@ -282,8 +293,11 @@ const AppState = {
         try {
             await Storage.activateVersion(this.currentSystemId, versionId);
             UIRenderer.showNotification('已切换到版本: ' + versionId, 'success');
-            // 重新加载当前机型
+            // 重新加载当前机型（会重置 currentVersionId）
             await this.switchSystem(this.currentSystemId, true);
+            // 在 switchSystem 重置后重新标记当前版本并持久化
+            this.currentVersionId = versionId;
+            localStorage.setItem('cv_' + this.currentSystemId, versionId);
             this.renderVersionList();
         } catch (e) {
             UIRenderer.showNotification('切换版本失败: ' + e.message, 'error', 5000);
@@ -297,6 +311,11 @@ const AppState = {
             async () => {
                 try {
                     await Storage.deleteVersion(this.currentSystemId, versionId);
+                    // 如果删除的是当前版本，清除标记
+                    if (this.currentVersionId === versionId) {
+                        this.currentVersionId = null;
+                        localStorage.removeItem('cv_' + this.currentSystemId);
+                    }
                     UIRenderer.showNotification('版本已删除', 'success');
                     this.renderVersionList();
                     this.renderHomepage();
@@ -305,6 +324,260 @@ const AppState = {
                 }
             }
         );
+    },
+
+    /* ============ 版本对比 ============ */
+
+    async showVersionCompareDialog() {
+        if (!this.currentSystemId) {
+            UIRenderer.showNotification('请先选择机型', 'warn');
+            return;
+        }
+
+        try {
+            const versions = await Storage.listVersions(this.currentSystemId);
+            if (versions.length < 2) {
+                UIRenderer.showNotification('至少需要保存 2 个版本才能进行对比', 'warn');
+                return;
+            }
+
+            const buildOptions = (selectedId) => {
+                return '<option value="">请选择版本</option>' +
+                    versions.map(v => {
+                        const date = new Date(v.savedAt);
+                        const dateStr = date.toLocaleDateString('zh-CN');
+                        return '<option value="' + UICommon.escAttr(v.id) + '"' +
+                            (v.id === selectedId ? ' selected' : '') +
+                            '>' + UICommon.escHtml(v.label) + ' (' + (v.attrCount || 0) + '项, ' + dateStr + ')</option>';
+                    }).join('');
+            };
+
+            const html = '<div class="form-group">' +
+                '<label>基准版本（旧）</label>' +
+                '<select id="compare-version-a" class="form-input">' + buildOptions('') + '</select>' +
+                '</div>' +
+                '<div class="form-group">' +
+                '<label>对比版本（新）</label>' +
+                '<select id="compare-version-b" class="form-input">' + buildOptions('') + '</select>' +
+                '</div>' +
+                '<p class="form-hint">选择两个版本，系统将显示属性差异（新增、删除、修改）</p>';
+
+            UIRenderer.showModal('版本对比', html, () => {
+                const vA = document.getElementById('compare-version-a')?.value;
+                const vB = document.getElementById('compare-version-b')?.value;
+                if (!vA || !vB) {
+                    UIRenderer.showNotification('请选择两个版本', 'warn');
+                    return false;
+                }
+                if (vA === vB) {
+                    UIRenderer.showNotification('请选择两个不同的版本', 'warn');
+                    return false;
+                }
+                // 先关闭选择对话框，再执行对比（避免两个模态框共用同一个 DOM 元素导致内容覆盖）
+                setTimeout(() => this.compareVersions(vA, vB), 50);
+            });
+        } catch (e) {
+            UIRenderer.showNotification('加载版本列表失败: ' + e.message, 'error', 5000);
+        }
+    },
+
+    async compareVersions(v1Id, v2Id) {
+        try {
+            UIRenderer.showNotification('正在加载版本数据...', 'info');
+
+            const [data1, data2] = await Promise.all([
+                Storage.getVersion(this.currentSystemId, v1Id),
+                Storage.getVersion(this.currentSystemId, v2Id)
+            ]);
+
+            if (!data1.profile || !data2.profile) {
+                UIRenderer.showNotification('版本数据加载失败', 'error');
+                return;
+            }
+
+            // 根据 savedAt 时间确定新旧版本顺序（确保 A 是旧版本，B 是新版本）
+            const date1 = new Date(data1.savedAt);
+            const date2 = new Date(data2.savedAt);
+            let oldProfile, newProfile, oldLabel, newLabel;
+            if (date1 <= date2) {
+                oldProfile = data1.profile;
+                newProfile = data2.profile;
+                oldLabel = data1.label;
+                newLabel = data2.label;
+            } else {
+                oldProfile = data2.profile;
+                newProfile = data1.profile;
+                oldLabel = data2.label;
+                newLabel = data1.label;
+            }
+
+            const diff = this._computeAttrDiff(oldProfile.attrMap || {}, newProfile.attrMap || {});
+            this._showVersionDiffDialog(oldLabel, newLabel, diff);
+        } catch (e) {
+            UIRenderer.showNotification('版本对比失败: ' + e.message, 'error', 5000);
+        }
+    },
+
+    _computeAttrDiff(attrMapA, attrMapB) {
+        const keysA = Object.keys(attrMapA);
+        const keysB = Object.keys(attrMapB);
+        const allKeys = new Set([...keysA, ...keysB]);
+
+        // 需要对比的字段
+        const compareFields = [
+            'type', 'defaultValue', 'displayName', 'displayNameZh',
+            'menuPath', 'readOnly', 'grayOut', 'hidden',
+            'supportsRedfish', 'supportsUnicfg', 'attributeScope',
+            'helpText', 'helpTextZh', 'warningText', 'platforms'
+        ];
+
+        const result = { added: [], removed: [], modified: [], unchanged: [] };
+
+        for (const key of allKeys) {
+            const inA = attrMapA[key];
+            const inB = attrMapB[key];
+
+            if (inA && !inB) {
+                // 仅在旧版本中存在 = 已删除
+                result.removed.push({ key, attr: inA });
+            } else if (!inA && inB) {
+                // 仅在新版本中存在 = 新增
+                result.added.push({ key, attr: inB });
+            } else {
+                // 两个版本都有 = 检查差异
+                const changes = [];
+                for (const field of compareFields) {
+                    let valA = inA[field];
+                    let valB = inB[field];
+
+                    // 对于数组字段（如 platforms），排序后再比较，避免顺序不同导致误判
+                    if (Array.isArray(valA) && Array.isArray(valB)) {
+                        valA = [...valA].sort();
+                        valB = [...valB].sort();
+                    }
+
+                    const strA = JSON.stringify(valA);
+                    const strB = JSON.stringify(valB);
+                    if (strA !== strB) {
+                        changes.push({
+                            field,
+                            oldVal: inA[field],
+                            newVal: inB[field]
+                        });
+                    }
+                }
+                if (changes.length > 0) {
+                    result.modified.push({ key, changes, attrA: inA, attrB: inB });
+                } else {
+                    result.unchanged.push({ key });
+                }
+            }
+        }
+
+        // 排序
+        result.added.sort((a, b) => a.key.localeCompare(b.key));
+        result.removed.sort((a, b) => a.key.localeCompare(b.key));
+        result.modified.sort((a, b) => a.key.localeCompare(b.key));
+        result.unchanged.sort((a, b) => a.key.localeCompare(b.key));
+
+        return result;
+    },
+
+    _showVersionDiffDialog(labelA, labelB, diff) {
+        const totalCount = diff.added.length + diff.removed.length + diff.modified.length + diff.unchanged.length;
+        const changedCount = diff.added.length + diff.removed.length + diff.modified.length;
+
+        const fieldLabelMap = {
+            type: '类型', defaultValue: '默认值', displayName: '显示名',
+            displayNameZh: '中文名', menuPath: '菜单路径', readOnly: '只读',
+            grayOut: '灰显', hidden: '隐藏', supportsRedfish: '支持Redfish',
+            supportsUnicfg: '支持Unicfg', attributeScope: '适用范围',
+            helpText: '帮助文本', warningText: '警告文本', platforms: '适用平台'
+        };
+
+        const formatVal = (v) => {
+            if (v === null || v === undefined) return '<空>';
+            if (typeof v === 'boolean') return v ? '是' : '否';
+            if (Array.isArray(v)) return v.length > 0 ? v.join(', ') : '<空>';
+            const s = String(v);
+            return s.length > 60 ? s.substring(0, 57) + '...' : s;
+        };
+
+        let bodyHtml = '<div class="diff-summary">' +
+            '<span class="diff-stat diff-total">共 ' + totalCount + ' 项</span>' +
+            '<span class="diff-stat diff-changed">变更 ' + changedCount + ' 项</span>' +
+            '<span class="diff-stat diff-added">新增 ' + diff.added.length + '</span>' +
+            '<span class="diff-stat diff-removed">删除 ' + diff.removed.length + '</span>' +
+            '<span class="diff-stat diff-modified">修改 ' + diff.modified.length + '</span>' +
+            '</div>';
+
+        if (changedCount === 0) {
+            bodyHtml += '<div class="diff-empty">两个版本完全一致，无任何差异</div>';
+        } else {
+            // 新增属性
+            if (diff.added.length > 0) {
+                bodyHtml += '<div class="diff-section"><h4 class="diff-section-title diff-added-title">新增属性 (' + diff.added.length + ')</h4>';
+                bodyHtml += '<table class="diff-table"><thead><tr><th>属性标识</th><th>类型</th><th>默认值</th><th>菜单路径</th></tr></thead><tbody>';
+                for (const item of diff.added) {
+                    bodyHtml += '<tr class="diff-row-added">' +
+                        '<td class="diff-key">' + UICommon.escHtml(item.key) + '</td>' +
+                        '<td>' + UICommon.escHtml(item.attr.type) + '</td>' +
+                        '<td>' + UICommon.escHtml(formatVal(item.attr.defaultValue)) + '</td>' +
+                        '<td>' + UICommon.escHtml(item.attr.menuPath) + '</td>' +
+                        '</tr>';
+                }
+                bodyHtml += '</tbody></table></div>';
+            }
+
+            // 删除属性
+            if (diff.removed.length > 0) {
+                bodyHtml += '<div class="diff-section"><h4 class="diff-section-title diff-removed-title">删除属性 (' + diff.removed.length + ')</h4>';
+                bodyHtml += '<table class="diff-table"><thead><tr><th>属性标识</th><th>类型</th><th>默认值</th><th>菜单路径</th></tr></thead><tbody>';
+                for (const item of diff.removed) {
+                    bodyHtml += '<tr class="diff-row-removed">' +
+                        '<td class="diff-key">' + UICommon.escHtml(item.key) + '</td>' +
+                        '<td>' + UICommon.escHtml(item.attr.type) + '</td>' +
+                        '<td>' + UICommon.escHtml(formatVal(item.attr.defaultValue)) + '</td>' +
+                        '<td>' + UICommon.escHtml(item.attr.menuPath) + '</td>' +
+                        '</tr>';
+                }
+                bodyHtml += '</tbody></table></div>';
+            }
+
+            // 修改属性
+            if (diff.modified.length > 0) {
+                bodyHtml += '<div class="diff-section"><h4 class="diff-section-title diff-modified-title">修改属性 (' + diff.modified.length + ')</h4>';
+                bodyHtml += '<table class="diff-table"><thead><tr><th>属性标识</th><th>变更字段</th><th>旧值</th><th>新值</th></tr></thead><tbody>';
+                for (const item of diff.modified) {
+                    const firstChange = item.changes[0];
+                    const fieldLabel = fieldLabelMap[firstChange.field] || firstChange.field;
+                    bodyHtml += '<tr class="diff-row-modified">' +
+                        '<td class="diff-key" rowspan="' + item.changes.length + '">' + UICommon.escHtml(item.key) + '</td>' +
+                        '<td>' + UICommon.escHtml(fieldLabel) + '</td>' +
+                        '<td class="diff-old-val">' + UICommon.escHtml(formatVal(firstChange.oldVal)) + '</td>' +
+                        '<td class="diff-new-val">' + UICommon.escHtml(formatVal(firstChange.newVal)) + '</td>' +
+                        '</tr>';
+                    // 一行有多个字段变更时追加行
+                    for (let i = 1; i < item.changes.length; i++) {
+                        const c = item.changes[i];
+                        const fl = fieldLabelMap[c.field] || c.field;
+                        bodyHtml += '<tr class="diff-row-modified">' +
+                            '<td>' + UICommon.escHtml(fl) + '</td>' +
+                            '<td class="diff-old-val">' + UICommon.escHtml(formatVal(c.oldVal)) + '</td>' +
+                            '<td class="diff-new-val">' + UICommon.escHtml(formatVal(c.newVal)) + '</td>' +
+                            '</tr>';
+                    }
+                }
+                bodyHtml += '</tbody></table></div>';
+            }
+        }
+
+        const title = '版本对比: ' + UICommon.escHtml(labelA) + ' → ' + UICommon.escHtml(labelB);
+        UIRenderer.showModal(title, bodyHtml, null, null, {
+            confirmText: '关闭',
+            hideCancel: true,
+            modalWidth: '800px'
+        });
     },
 
     bindEvents() {
@@ -365,6 +638,9 @@ const AppState = {
 
         // 保存版本
         on('btn-save-version', 'click', () => this.showSaveVersionDialog());
+
+        // 版本对比
+        on('btn-compare-version', 'click', () => this.showVersionCompareDialog());
 
         // 添加选项（内容区独立按钮）
         on('btn-add-attr', 'click', () => {
@@ -495,9 +771,18 @@ const AppState = {
 
         this.currentSystemId = systemId;
         this.currentProfile = profile;
-        this.activeMenu = null;
         this.searchKeyword = '';
         this.modifiedAttrs = new Set();
+        // 从 localStorage 恢复当前版本标记，刷新后不丢失
+        this.currentVersionId = localStorage.getItem('cv_' + systemId) || null;
+
+        // 默认选中第一个菜单
+        const rootMenus = MenuTree.buildTree(profile.menuMap);
+        if (rootMenus.length > 0) {
+            this.activeMenu = rootMenus[0].menuPath;
+        } else {
+            this.activeMenu = null;
+        }
 
         // 清除搜索
         const searchInput = $id('search-input');

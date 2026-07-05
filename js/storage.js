@@ -302,6 +302,24 @@ const Storage = {
             }
         }
         throw new Error('版本管理仅支持 API 模式');
+    },
+
+    /** 获取单个版本的完整 profile（用于版本对比） */
+    async getVersion(systemId, versionId) {
+        if (this._mode === 'api') {
+            try {
+                const res = await fetch('/api/systems/' + encodeURIComponent(systemId) + '/versions/' + encodeURIComponent(versionId));
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || '获取版本失败');
+                }
+                return await res.json();
+            } catch (e) {
+                console.error('[Storage] API getVersion 失败:', e);
+                throw e;
+            }
+        }
+        throw new Error('版本管理仅支持 API 模式');
     }
 };
 
